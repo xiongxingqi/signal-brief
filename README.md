@@ -144,6 +144,7 @@ signal-brief:
 ## 文档
 
 - [立项文档](docs/personal-tech-newsletter-system.md)
+- [RSS 抓取入库备忘](docs/rss-ingestion.md)
 - [Git 提交规范](docs/git-commit-convention.md)
 - [贡献者指南](AGENTS.md)
 
