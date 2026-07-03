@@ -34,7 +34,7 @@ Git 提交规范以 [docs/git-commit-convention.md](docs/git-commit-convention.m
 
 优先使用 `feat`、`fix`、`docs`、`style`、`refactor`、`perf`、`test`、`build`、`ci`、`chore`、`revert`。`scope` 可用于标明影响模块；破坏性变更必须用 `!`、`BREAKING CHANGE:` 或 `BREAKING-CHANGE:` 标识。一个提交尽量只表达一件事，`description` 要简短明确，不以句号结尾。
 
-项目交流语言为中文。Issue、PR 描述、评审意见、提交摘要和代理回复默认使用中文；代码标识符、配置键、日志字段和通用技术术语可保留英文。
+项目主语言为中文。面向维护者的文档、注释、日志、异常说明、Issue、PR 描述、评审意见、提交摘要和代理回复默认使用中文；代码标识符、配置键、协议字段和通用技术术语可保留英文。
 
 PR 应包含变更目的、关键实现点、关联 issue（如有）和已运行的验证命令。涉及 profile、环境变量、迁移、定时任务、邮件或数据库行为的改动必须明确说明。仅在修改模板或静态 UI 资源时附截图。
 
