@@ -1,35 +1,42 @@
 package cn.name.celestrong.signalbrief.feed;
 
 import cn.name.celestrong.signalbrief.config.FeedProperties;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StreamUtils;
+import org.springframework.web.client.RestClient;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 
 @Component
 public class HttpFeedClient implements FeedClient {
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build();
+    private final RestClient restClient;
+
+    public HttpFeedClient(RestClient.Builder restClientBuilder) {
+        this.restClient = restClientBuilder
+                .defaultHeader(HttpHeaders.USER_AGENT, "signal-brief")
+                .build();
+    }
 
     @Override
     public InputStream fetch(FeedProperties.FeedSource source) {
         try {
-            HttpRequest request = HttpRequest.newBuilder(source.url())
-                    .timeout(Duration.ofSeconds(20))
-                    .GET()
-                    .build();
-            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new FeedFetchException("Feed source returned HTTP " + response.statusCode() + ": " + source.name(), null);
-            }
-            return new ByteArrayInputStream(response.body());
+            byte[] feedBytes = restClient.get()
+                    .uri(source.url())
+                    .accept(MediaType.APPLICATION_XML, MediaType.TEXT_XML, MediaType.APPLICATION_ATOM_XML, MediaType.ALL)
+                    .exchange((request, response) -> {
+                        if (!response.getStatusCode().is2xxSuccessful()) {
+                            throw new FeedFetchException(
+                                    "Feed source returned HTTP " + response.getStatusCode().value() + ": " + source.name(),
+                                    response.createException()
+                            );
+                        }
+                        return StreamUtils.copyToByteArray(response.getBody());
+                    });
+            return new ByteArrayInputStream(feedBytes);
         } catch (FeedFetchException ex) {
             throw ex;
         } catch (Exception ex) {

@@ -9,6 +9,7 @@ import cn.name.celestrong.signalbrief.feed.FeedParser;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -78,6 +79,11 @@ class FeedIngestionServiceTest {
     private static final class FakeFeedParser implements FeedParser {
         @Override
         public List<FetchedArticle> parse(FeedProperties.FeedSource source, InputStream inputStream) {
+            try {
+                assertEquals("<feed/>", new String(inputStream.readAllBytes(), StandardCharsets.UTF_8));
+            } catch (IOException ex) {
+                throw new AssertionError(ex);
+            }
             return List.of(
                     article(source, "guid-1"),
                     article(source, "guid-2")
