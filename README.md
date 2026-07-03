@@ -76,13 +76,13 @@ SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run
 ./mvnw test
 ```
 
-运行单元测试。
+运行本地基础测试。日常开发和提交前默认只跑这一条。
 
 ```bash
 ./mvnw verify
 ```
 
-运行完整 Maven 验证流程，包括 Failsafe 管理的 `*IT` 集成测试。
+运行完整 Maven 验证流程，包括 Failsafe 管理的 `*IT` 集成测试。该命令默认交给 CI 执行；本地只有在专门排查数据库、迁移或 Mapper 问题时才运行。
 
 ```bash
 ./mvnw package
@@ -101,6 +101,31 @@ SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run
 - `.env.example`：环境变量示例，不应包含真实密钥。
 
 本地私密配置放在 `.env`，不要提交真实数据库、SMTP 或 AI Provider 密钥。
+
+## 测试策略
+
+本地默认只运行基础测试：
+
+```bash
+./mvnw test
+```
+
+数据库集成测试由 GitHub Actions 执行，CI 使用独立 PostgreSQL service，并设置 `SPRING_DOCKER_COMPOSE_ENABLED=false`，避免测试进程管理本地 `compose.yaml`。
+
+### RSS 源配置
+
+RSS 源通过 `signal-brief.feeds` 配置：
+
+```yaml
+signal-brief:
+  feeds:
+    - name: Spring Blog
+      url: https://spring.io/blog.atom
+      category: FRAMEWORK
+      enabled: true
+```
+
+第一版 RSS 源不入库；修改源配置后需要重启应用。
 
 ## 项目结构
 

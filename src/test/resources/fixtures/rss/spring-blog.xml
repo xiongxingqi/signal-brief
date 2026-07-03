@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Spring Blog</title>
+    <link>https://spring.io/blog</link>
+    <description>Spring Blog fixture</description>
+    <item>
+      <title>Spring Boot 4.0.7 available now</title>
+      <link>https://spring.io/blog/2026/07/01/spring-boot-4-0-7-available-now</link>
+      <guid>spring-boot-4.0.7</guid>
+      <pubDate>Wed, 01 Jul 2026 10:00:00 GMT</pubDate>
+      <description>Spring Boot 4.0.7 has been released.</description>
+    </item>
+  </channel>
+</rss>

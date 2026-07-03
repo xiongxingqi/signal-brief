@@ -1554,25 +1554,20 @@ signal-brief:
 
 预期：构建成功。
 
-- [ ] **步骤 3：使用 PostgreSQL 运行完整验证**
+- [ ] **步骤 3：确认 CI 负责 PostgreSQL 完整验证**
 
-通过项目 Compose 配置或等价的本地数据库启动 PostgreSQL，然后运行：
+本地默认不运行数据库集成测试。确认 `.github/workflows/ci.yml` 使用 GitHub Actions PostgreSQL service，并设置：
 
-```bash
-SPRING_PROFILES_ACTIVE=test \
-SPRING_DATASOURCE_USERNAME=celestrong \
-SPRING_DATASOURCE_PASSWORD=123456 \
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/signal_brief \
-SERVER_PORT=8080 \
-./mvnw -B verify
+```yaml
+SPRING_DOCKER_COMPOSE_ENABLED: false
 ```
 
-预期：构建成功。
+预期：CI 通过 `./mvnw -B verify` 运行 `*IT` 集成测试；本地只把 `./mvnw -B test` 作为常规验证。
 
 - [ ] **步骤 4：确认错误拼写的数据源变量不再存在**
 
 ```bash
-rg --hidden -n "SPRING_DATASOURCE_UERNAME" -g '!target' -g '!.git' .
+rg --hidden -n "SPRING_DATASOURCE_UER""NAME" -g '!target' -g '!.git' .
 ```
 
 预期：无输出，退出码为 1。

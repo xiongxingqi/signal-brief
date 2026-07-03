@@ -7,8 +7,8 @@
 ## 构建、测试与本地运行
 
 - `./mvnw spring-boot:run`：本地启动应用；默认使用 `dev` profile，除非设置 `SPRING_PROFILES_ACTIVE`。
-- `./mvnw test`：运行 Maven Surefire 管理的单元测试。
-- `./mvnw verify`：执行完整验证流程，并运行 Failsafe 集成测试，例如 `*IT`。
+- `./mvnw test`：运行 Maven Surefire 管理的本地基础测试；日常开发和提交前默认只运行这一条。
+- `./mvnw verify`：执行完整验证流程，并运行 Failsafe 集成测试，例如 `*IT`；默认交给 CI 运行，本地仅在专门排查数据库、迁移或 Mapper 问题时使用。
 - `./mvnw package`：构建应用产物，输出到 `target/`。
 - `docker compose up -d postgres`：启动 `compose.yaml` 中定义的 PostgreSQL 服务；如端口映射变化，同步调整 datasource 环境变量。
 
@@ -22,7 +22,7 @@ YAML 配置按 Spring namespace 分组，新增环境变量需同步写入 `.env
 
 ## 测试规范
 
-测试使用 JUnit 5 和 Spring Boot Test。快速单元测试命名为 `*Test`，集成测试命名为 `*IT`；当前 Failsafe 配置会在 `verify` 阶段运行集成测试。测试 fixture、profile 配置和测试专用资源放在 `src/test/resources`。涉及数据库、迁移或外部服务的改动，应补充聚焦的集成测试，并说明所需环境变量。
+测试使用 JUnit 5 和 Spring Boot Test。快速单元测试命名为 `*Test`，集成测试命名为 `*IT`；当前 Failsafe 配置会在 `verify` 阶段运行集成测试。测试 fixture、profile 配置和测试专用资源放在 `src/test/resources`。涉及数据库、迁移或外部服务的改动，应补充聚焦的集成测试，由 CI 负责运行。CI 应使用独立服务并设置 `SPRING_DOCKER_COMPOSE_ENABLED=false`，避免 Spring Boot 测试进程接管本地 `compose.yaml`。
 
 ## Commit 与 PR 规范
 
