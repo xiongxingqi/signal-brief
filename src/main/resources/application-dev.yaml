@@ -1,0 +1,12 @@
+server:
+  port: ${SERVER_PORT:8080}
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_UERNAME:celestrong}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/signal_brief}
+logging:
+  level:
+    root: info
+    cn.name.celestrong.signalbrief: debug

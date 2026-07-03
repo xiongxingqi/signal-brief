@@ -1,0 +1,14 @@
+spring:
+  docker:
+    compose:
+      enabled: false
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_UERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+server:
+  port: ${SERVER_PORT}
+logging:
+  level:
+    root: info
