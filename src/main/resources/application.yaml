@@ -6,3 +6,20 @@ spring:
   flyway:
     callback-locations: classpath:db/callback
     locations: classpath:db/migration
+  task:
+    execution:
+      thread-name-prefix: signal-async-
+      pool:
+        core-size: 4
+        max-size: 8
+        queue-capacity: 100
+      shutdown:
+        await-termination: true
+        await-termination-period: 30s
+    scheduling:
+      thread-name-prefix: signal-scheduler-
+      pool:
+        size: 2
+      shutdown:
+        await-termination: true
+        await-termination-period: 30s
