@@ -185,6 +185,16 @@ private static final int POST_VISIBLE_DAYS_FOR_HALF_YEAR = 180;
 - 包装异常时保留原始 cause。
 - 不把底层 SQL、密钥、token、内部路径等敏感信息直接暴露给用户。
 
+## 工具库与生态选型
+
+- 常用字符串、集合、数组、对象和 I/O 辅助逻辑，优先使用项目已引入的 Apache Commons 与 Guava，避免手写重复工具方法。
+- Apache Commons 优先用于通用判空、字符串处理、集合处理和 I/O 操作，例如 `StringUtils.isBlank`、`CollectionUtils.isEmpty`、`IOUtils`、`FileUtils`。
+- Guava 优先用于 JDK 或 Spring 不足以表达清楚的不可变集合、缓存、限流、Multimap、Range 等场景，例如 `ImmutableList`、`CacheBuilder`、`RateLimiter`。
+- 不为了使用工具库替换清晰的 JDK/Spring 原生 API；简单逻辑保持简单。
+- 新代码不要使用 Guava `Optional`，统一使用 `java.util.Optional`。
+- HTTP 客户端统一优先使用 Spring `RestClient`。配置应集中管理超时、默认 header、错误处理和日志，不在业务代码中直接散落底层 HTTP 客户端。
+- JSON 解析和序列化优先使用 Spring 生态的 Jackson 能力，例如 Spring 管理的 `ObjectMapper`、`JsonNode`、record/DTO 映射和 HTTP message converter。不要随意引入 Gson、Fastjson 或手动 `new ObjectMapper()`。
+
 ## Spring 使用约定
 
 - 依赖注入优先使用构造器注入。
