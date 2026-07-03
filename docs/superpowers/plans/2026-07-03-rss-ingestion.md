@@ -1,67 +1,67 @@
-# RSS Ingestion Implementation Plan
+# RSS 抓取入库实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给执行代理：** 必须使用子技能：superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans，按任务逐项执行本计划。步骤使用复选框（`- [ ]`）跟踪。
 
-**Goal:** Build the first MVP slice that reads enabled RSS source configuration, parses RSS / Atom entries, deduplicates articles, and persists new articles to PostgreSQL.
+**目标：** 构建 MVP 第一段业务链路：读取启用的 RSS 源配置，解析 RSS / Atom 条目，完成文章去重，并将新文章持久化到 PostgreSQL。
 
-**Architecture:** Feed sources remain in YAML for MVP. ROME parses feed XML into `FetchedArticle`; article services normalize, hash, deduplicate, and save via MyBatis. A single orchestration service ingests all enabled feeds and returns execution statistics.
+**架构：** MVP 阶段 RSS 源保留在 YAML 中维护。ROME 将 feed XML 解析为 `FetchedArticle`；文章服务负责标准化、哈希、去重，并通过 MyBatis 保存。单个编排服务负责抓取所有启用源并返回执行统计。
 
-**Tech Stack:** Java 25, Spring Boot 4, Maven, PostgreSQL, Flyway, MyBatis, ROME, JUnit 5.
-
----
-
-## Current Constraints
-
-- Work happens on branch `feat/rss-ingestion`.
-- Existing unrelated worktree changes must be ignored: `compose.yaml` modified and `mvnw.cmd` deleted.
-- `./mvnw -B test` is the baseline command and currently passes.
-- `./mvnw -B verify` needs a reachable PostgreSQL instance.
-- Do not add AI summary, mail sending, scheduled jobs, Web UI, or database-managed feed sources in this plan.
-
-## File Structure
-
-- Modify `src/main/java/cn/name/celestrong/signalbrief/SignalBriefApplication.java`: enable `@ConfigurationPropertiesScan`.
-- Create `src/main/java/cn/name/celestrong/signalbrief/article/ArticleCategory.java`: fixed article categories.
-- Create `src/main/java/cn/name/celestrong/signalbrief/config/FeedProperties.java`: bind `signal-brief.feeds`.
-- Modify `src/main/resources/application.yaml`: add empty `signal-brief.feeds` default.
-- Create `src/test/java/cn/name/celestrong/signalbrief/config/FeedPropertiesTest.java`: unit coverage for enabled feed filtering and validation.
-- Create `src/main/java/cn/name/celestrong/signalbrief/feed/FetchedArticle.java`: parsed feed item DTO.
-- Create `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParser.java`: parser interface.
-- Create `src/main/java/cn/name/celestrong/signalbrief/feed/RomeFeedParser.java`: ROME parser implementation.
-- Create `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParseException.java`: parser exception.
-- Create `src/test/resources/fixtures/rss/spring-blog.xml`: RSS fixture.
-- Create `src/test/resources/fixtures/rss/inside-java.atom`: Atom fixture.
-- Create `src/test/java/cn/name/celestrong/signalbrief/feed/RomeFeedParserTest.java`: parser tests.
-- Create `src/main/java/cn/name/celestrong/signalbrief/article/Article.java`: persisted article model.
-- Create `src/main/java/cn/name/celestrong/signalbrief/article/NewArticle.java`: insert command.
-- Create `src/main/java/cn/name/celestrong/signalbrief/article/ArticleMapper.java`: MyBatis persistence boundary.
-- Create `src/main/resources/db/migration/V1__create_article_table.sql`: article table and indexes.
-- Create `src/test/java/cn/name/celestrong/signalbrief/article/ArticleMapperIT.java`: database integration tests.
-- Create `src/main/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationService.java`: hash and duplicate checks.
-- Create `src/main/java/cn/name/celestrong/signalbrief/article/ArticleIngestionService.java`: save parsed articles.
-- Create `src/test/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationServiceTest.java`: hash and duplicate-key behavior.
-- Create `src/test/java/cn/name/celestrong/signalbrief/article/ArticleIngestionServiceTest.java`: ingestion behavior with fake mapper.
-- Create `src/main/java/cn/name/celestrong/signalbrief/feed/FeedClient.java`: feed byte retrieval boundary.
-- Create `src/main/java/cn/name/celestrong/signalbrief/feed/HttpFeedClient.java`: HTTP implementation.
-- Create `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionResult.java`: batch statistics.
-- Create `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionService.java`: orchestration.
-- Create `src/test/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionServiceTest.java`: orchestration tests using fakes.
-- Modify `README.md`: document `signal-brief.feeds` configuration.
+**技术栈：** Java 25, Spring Boot 4, Maven, PostgreSQL, Flyway, MyBatis, ROME, JUnit 5.
 
 ---
 
-### Task 1: Feed Configuration
+## 当前约束
 
-**Files:**
-- Modify: `src/main/java/cn/name/celestrong/signalbrief/SignalBriefApplication.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/article/ArticleCategory.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/config/FeedProperties.java`
-- Modify: `src/main/resources/application.yaml`
-- Test: `src/test/java/cn/name/celestrong/signalbrief/config/FeedPropertiesTest.java`
+- 在 `feat/rss-ingestion` 分支上实施。
+- 忽略现有无关工作区变更：`compose.yaml` 已修改，`mvnw.cmd` 已删除。
+- `./mvnw -B test` 是基线验证命令，当前已通过。
+- `./mvnw -B verify` 需要可连接的 PostgreSQL 实例。
+- 本计划不加入 AI 摘要、邮件发送、定时任务、Web UI 或数据库管理 RSS 源。
 
-- [ ] **Step 1: Write failing tests for feed configuration**
+## 文件结构
 
-Create `src/test/java/cn/name/celestrong/signalbrief/config/FeedPropertiesTest.java`:
+- 修改 `src/main/java/cn/name/celestrong/signalbrief/SignalBriefApplication.java`：启用 `@ConfigurationPropertiesScan`。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/article/ArticleCategory.java`：固定文章分类枚举。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/config/FeedProperties.java`：绑定 `signal-brief.feeds` 配置。
+- 修改 `src/main/resources/application.yaml`：添加空的 `signal-brief.feeds` 默认配置。
+- 创建 `src/test/java/cn/name/celestrong/signalbrief/config/FeedPropertiesTest.java`：覆盖启用源过滤和配置校验。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/feed/FetchedArticle.java`：解析后的 feed 条目 DTO。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParser.java`：解析器接口。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/feed/RomeFeedParser.java`：ROME 解析实现。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParseException.java`：解析异常。
+- 创建 `src/test/resources/fixtures/rss/spring-blog.xml`：RSS 测试 fixture。
+- 创建 `src/test/resources/fixtures/rss/inside-java.atom`：Atom 测试 fixture。
+- 创建 `src/test/java/cn/name/celestrong/signalbrief/feed/RomeFeedParserTest.java`：解析器测试。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/article/Article.java`：已持久化文章模型。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/article/NewArticle.java`：文章插入命令对象。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/article/ArticleMapper.java`：MyBatis 持久化边界。
+- 创建 `src/main/resources/db/migration/V1__create_article_table.sql`：文章表和索引。
+- 创建 `src/test/java/cn/name/celestrong/signalbrief/article/ArticleMapperIT.java`：数据库集成测试。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationService.java`：哈希生成和重复检查。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/article/ArticleIngestionService.java`：保存解析后的文章。
+- 创建 `src/test/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationServiceTest.java`：哈希和去重 key 行为测试。
+- 创建 `src/test/java/cn/name/celestrong/signalbrief/article/ArticleIngestionServiceTest.java`：使用 fake mapper 验证入库行为。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/feed/FeedClient.java`：feed 内容获取边界。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/feed/HttpFeedClient.java`：HTTP 获取实现。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionResult.java`：批处理统计结果。
+- 创建 `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionService.java`：抓取入库编排服务。
+- 创建 `src/test/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionServiceTest.java`：使用 fake 对象验证编排逻辑。
+- 修改 `README.md`：说明 `signal-brief.feeds` 配置方式。
+
+---
+
+### 任务 1：RSS 源配置
+
+**文件：**
+- 修改：`src/main/java/cn/name/celestrong/signalbrief/SignalBriefApplication.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/article/ArticleCategory.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/config/FeedProperties.java`
+- 修改：`src/main/resources/application.yaml`
+- 测试：`src/test/java/cn/name/celestrong/signalbrief/config/FeedPropertiesTest.java`
+
+- [ ] **步骤 1：编写 RSS 源配置失败测试**
+
+创建 `src/test/java/cn/name/celestrong/signalbrief/config/FeedPropertiesTest.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.config;
@@ -112,19 +112,19 @@ class FeedPropertiesTest {
 }
 ```
 
-- [ ] **Step 2: Run the config test and verify it fails**
+- [ ] **步骤 2：运行配置测试并确认失败**
 
-Run:
+运行：
 
 ```bash
 ./mvnw -B -Dtest=FeedPropertiesTest test
 ```
 
-Expected: compilation fails because `FeedProperties` and `ArticleCategory` do not exist.
+预期：编译失败，因为 `FeedProperties` 和 `ArticleCategory` 尚不存在。
 
-- [ ] **Step 3: Add article category enum**
+- [ ] **步骤 3：添加文章分类枚举**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/article/ArticleCategory.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/article/ArticleCategory.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.article;
@@ -138,9 +138,9 @@ public enum ArticleCategory {
 }
 ```
 
-- [ ] **Step 4: Add feed properties**
+- [ ] **步骤 4：添加 RSS 源配置属性**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/config/FeedProperties.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/config/FeedProperties.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.config;
@@ -185,9 +185,9 @@ public record FeedProperties(List<FeedSource> feeds) {
 }
 ```
 
-- [ ] **Step 5: Enable configuration properties scanning**
+- [ ] **步骤 5：启用配置属性扫描**
 
-Modify `src/main/java/cn/name/celestrong/signalbrief/SignalBriefApplication.java`:
+修改 `src/main/java/cn/name/celestrong/signalbrief/SignalBriefApplication.java`：
 
 ```java
 package cn.name.celestrong.signalbrief;
@@ -209,28 +209,28 @@ public class SignalBriefApplication {
 }
 ```
 
-- [ ] **Step 6: Add default feed configuration**
+- [ ] **步骤 6：添加默认 RSS 源配置**
 
-Modify `src/main/resources/application.yaml` by adding the root-level block:
+修改 `src/main/resources/application.yaml`，添加以下根级配置块：
 
 ```yaml
 signal-brief:
   feeds: []
 ```
 
-Keep the existing `spring:` block unchanged.
+保留现有 `spring:` 配置块不变。
 
-- [ ] **Step 7: Run config test**
+- [ ] **步骤 7：运行配置测试**
 
-Run:
+运行：
 
 ```bash
 ./mvnw -B -Dtest=FeedPropertiesTest test
 ```
 
-Expected: build success.
+预期：构建成功。
 
-- [ ] **Step 8: Commit configuration task**
+- [ ] **步骤 8：提交配置任务**
 
 ```bash
 git add src/main/java/cn/name/celestrong/signalbrief/SignalBriefApplication.java \
@@ -243,20 +243,20 @@ git commit -m "feat(feed): 添加 RSS 源配置"
 
 ---
 
-### Task 2: ROME Feed Parser
+### 任务 2：ROME Feed 解析
 
-**Files:**
-- Create: `src/main/java/cn/name/celestrong/signalbrief/feed/FetchedArticle.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParser.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/feed/RomeFeedParser.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParseException.java`
-- Create: `src/test/resources/fixtures/rss/spring-blog.xml`
-- Create: `src/test/resources/fixtures/rss/inside-java.atom`
-- Test: `src/test/java/cn/name/celestrong/signalbrief/feed/RomeFeedParserTest.java`
+**文件：**
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/feed/FetchedArticle.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/feed/FeedParser.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/feed/RomeFeedParser.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/feed/FeedParseException.java`
+- 创建：`src/test/resources/fixtures/rss/spring-blog.xml`
+- 创建：`src/test/resources/fixtures/rss/inside-java.atom`
+- 测试：`src/test/java/cn/name/celestrong/signalbrief/feed/RomeFeedParserTest.java`
 
-- [ ] **Step 1: Add local RSS and Atom fixtures**
+- [ ] **步骤 1：添加本地 RSS 和 Atom fixture**
 
-Create `src/test/resources/fixtures/rss/spring-blog.xml`:
+创建 `src/test/resources/fixtures/rss/spring-blog.xml`：
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -276,7 +276,7 @@ Create `src/test/resources/fixtures/rss/spring-blog.xml`:
 </rss>
 ```
 
-Create `src/test/resources/fixtures/rss/inside-java.atom`:
+创建 `src/test/resources/fixtures/rss/inside-java.atom`：
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -294,9 +294,9 @@ Create `src/test/resources/fixtures/rss/inside-java.atom`:
 </feed>
 ```
 
-- [ ] **Step 2: Write failing parser tests**
+- [ ] **步骤 2：编写解析器失败测试**
 
-Create `src/test/java/cn/name/celestrong/signalbrief/feed/RomeFeedParserTest.java`:
+创建 `src/test/java/cn/name/celestrong/signalbrief/feed/RomeFeedParserTest.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.feed;
@@ -371,19 +371,19 @@ class RomeFeedParserTest {
 }
 ```
 
-- [ ] **Step 3: Run parser test and verify it fails**
+- [ ] **步骤 3：运行解析器测试并确认失败**
 
-Run:
+运行：
 
 ```bash
 ./mvnw -B -Dtest=RomeFeedParserTest test
 ```
 
-Expected: compilation fails because parser classes do not exist.
+预期：编译失败，因为解析器相关类尚不存在。
 
-- [ ] **Step 4: Add parsed article record and parser interface**
+- [ ] **步骤 4：添加解析结果记录和解析器接口**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/feed/FetchedArticle.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/feed/FetchedArticle.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.feed;
@@ -405,7 +405,7 @@ public record FetchedArticle(
 }
 ```
 
-Create `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParser.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParser.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.feed;
@@ -421,9 +421,9 @@ public interface FeedParser {
 }
 ```
 
-- [ ] **Step 5: Add ROME parser**
+- [ ] **步骤 5：添加 ROME 解析器**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/feed/RomeFeedParser.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/feed/RomeFeedParser.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.feed;
@@ -483,7 +483,7 @@ public class RomeFeedParser implements FeedParser {
 }
 ```
 
-Create `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParseException.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/feed/FeedParseException.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.feed;
@@ -496,17 +496,17 @@ public class FeedParseException extends RuntimeException {
 }
 ```
 
-- [ ] **Step 6: Run parser test**
+- [ ] **步骤 6：运行解析器测试**
 
-Run:
+运行：
 
 ```bash
 ./mvnw -B -Dtest=RomeFeedParserTest test
 ```
 
-Expected: build success.
+预期：构建成功。
 
-- [ ] **Step 7: Commit parser task**
+- [ ] **步骤 7：提交解析器任务**
 
 ```bash
 git add src/main/java/cn/name/celestrong/signalbrief/feed \
@@ -517,18 +517,18 @@ git commit -m "feat(feed): 解析 RSS 和 Atom 条目"
 
 ---
 
-### Task 3: Article Table and Mapper
+### 任务 3：文章表与 Mapper
 
-**Files:**
-- Create: `src/main/resources/db/migration/V1__create_article_table.sql`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/article/Article.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/article/NewArticle.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/article/ArticleMapper.java`
-- Test: `src/test/java/cn/name/celestrong/signalbrief/article/ArticleMapperIT.java`
+**文件：**
+- 创建：`src/main/resources/db/migration/V1__create_article_table.sql`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/article/Article.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/article/NewArticle.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/article/ArticleMapper.java`
+- 测试：`src/test/java/cn/name/celestrong/signalbrief/article/ArticleMapperIT.java`
 
-- [ ] **Step 1: Write failing mapper integration test**
+- [ ] **步骤 1：编写 Mapper 集成失败测试**
 
-Create `src/test/java/cn/name/celestrong/signalbrief/article/ArticleMapperIT.java`:
+创建 `src/test/java/cn/name/celestrong/signalbrief/article/ArticleMapperIT.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.article;
@@ -601,7 +601,7 @@ class ArticleMapperIT {
 }
 ```
 
-- [ ] **Step 2: Run mapper test and verify it fails**
+- [ ] **步骤 2：运行 Mapper 测试并确认失败**
 
 Run with PostgreSQL available:
 
@@ -614,11 +614,11 @@ SERVER_PORT=8080 \
 ./mvnw -B -Dit.test=ArticleMapperIT verify
 ```
 
-Expected: compilation fails because mapper and article model do not exist.
+预期：编译失败，因为 Mapper 和文章模型尚不存在。
 
-- [ ] **Step 3: Add Flyway migration**
+- [ ] **步骤 3：添加 Flyway 迁移**
 
-Create `src/main/resources/db/migration/V1__create_article_table.sql`:
+创建 `src/main/resources/db/migration/V1__create_article_table.sql`：
 
 ```sql
 CREATE TABLE article (
@@ -651,9 +651,9 @@ CREATE INDEX idx_article_published_at
     ON article (published_at);
 ```
 
-- [ ] **Step 4: Add article records**
+- [ ] **步骤 4：添加文章记录类型**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/article/Article.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/article/Article.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.article;
@@ -677,7 +677,7 @@ public record Article(
 }
 ```
 
-Create `src/main/java/cn/name/celestrong/signalbrief/article/NewArticle.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/article/NewArticle.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.article;
@@ -715,9 +715,9 @@ public record NewArticle(
 }
 ```
 
-- [ ] **Step 5: Add MyBatis mapper**
+- [ ] **步骤 5：添加 MyBatis Mapper**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/article/ArticleMapper.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/article/ArticleMapper.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.article;
@@ -783,7 +783,7 @@ public interface ArticleMapper {
 }
 ```
 
-- [ ] **Step 6: Run mapper integration test**
+- [ ] **步骤 6：运行 Mapper 集成测试**
 
 Run with PostgreSQL available:
 
@@ -796,9 +796,9 @@ SERVER_PORT=8080 \
 ./mvnw -B -Dit.test=ArticleMapperIT verify
 ```
 
-Expected: build success.
+预期：构建成功。
 
-- [ ] **Step 7: Commit mapper task**
+- [ ] **步骤 7：提交 Mapper 任务**
 
 ```bash
 git add src/main/resources/db/migration/V1__create_article_table.sql \
@@ -811,17 +811,17 @@ git commit -m "feat(article): 添加文章表和持久化映射"
 
 ---
 
-### Task 4: Deduplication and Article Ingestion
+### 任务 4：去重与文章入库
 
-**Files:**
-- Create: `src/main/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationService.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/article/ArticleIngestionService.java`
-- Test: `src/test/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationServiceTest.java`
-- Test: `src/test/java/cn/name/celestrong/signalbrief/article/ArticleIngestionServiceTest.java`
+**文件：**
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationService.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/article/ArticleIngestionService.java`
+- 测试：`src/test/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationServiceTest.java`
+- 测试：`src/test/java/cn/name/celestrong/signalbrief/article/ArticleIngestionServiceTest.java`
 
-- [ ] **Step 1: Write failing deduplication tests**
+- [ ] **步骤 1：编写去重失败测试**
 
-Create `src/test/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationServiceTest.java`:
+创建 `src/test/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationServiceTest.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.article;
@@ -931,17 +931,17 @@ class ArticleDeduplicationServiceTest {
 }
 ```
 
-- [ ] **Step 2: Run deduplication test and verify it fails**
+- [ ] **步骤 2：运行去重测试并确认失败**
 
 ```bash
 ./mvnw -B -Dtest=ArticleDeduplicationServiceTest test
 ```
 
-Expected: compilation fails because `ArticleDeduplicationService` does not exist.
+预期：编译失败，因为 `ArticleDeduplicationService` 尚不存在。
 
-- [ ] **Step 3: Implement deduplication service**
+- [ ] **步骤 3：实现去重服务**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationService.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationService.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.article;
@@ -1012,17 +1012,17 @@ public class ArticleDeduplicationService {
 }
 ```
 
-- [ ] **Step 4: Run deduplication test**
+- [ ] **步骤 4：运行去重测试**
 
 ```bash
 ./mvnw -B -Dtest=ArticleDeduplicationServiceTest test
 ```
 
-Expected: build success.
+预期：构建成功。
 
-- [ ] **Step 5: Write failing article ingestion tests**
+- [ ] **步骤 5：编写文章入库失败测试**
 
-Create `src/test/java/cn/name/celestrong/signalbrief/article/ArticleIngestionServiceTest.java`:
+创建 `src/test/java/cn/name/celestrong/signalbrief/article/ArticleIngestionServiceTest.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.article;
@@ -1105,17 +1105,17 @@ class ArticleIngestionServiceTest {
 }
 ```
 
-- [ ] **Step 6: Run ingestion test and verify it fails**
+- [ ] **步骤 6：运行入库测试并确认失败**
 
 ```bash
 ./mvnw -B -Dtest=ArticleIngestionServiceTest test
 ```
 
-Expected: compilation fails because `ArticleIngestionService` does not exist.
+预期：编译失败，因为 `ArticleIngestionService` 尚不存在。
 
-- [ ] **Step 7: Implement article ingestion service**
+- [ ] **步骤 7：实现文章入库服务**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/article/ArticleIngestionService.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/article/ArticleIngestionService.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.article;
@@ -1162,15 +1162,15 @@ public class ArticleIngestionService {
 }
 ```
 
-- [ ] **Step 8: Run article tests**
+- [ ] **步骤 8：运行文章相关测试**
 
 ```bash
 ./mvnw -B -Dtest=ArticleDeduplicationServiceTest,ArticleIngestionServiceTest test
 ```
 
-Expected: build success.
+预期：构建成功。
 
-- [ ] **Step 9: Commit deduplication and ingestion task**
+- [ ] **步骤 9：提交去重和入库任务**
 
 ```bash
 git add src/main/java/cn/name/celestrong/signalbrief/article/ArticleDeduplicationService.java \
@@ -1182,19 +1182,19 @@ git commit -m "feat(article): 实现文章去重入库"
 
 ---
 
-### Task 5: Feed Ingestion Orchestration
+### 任务 5：RSS 抓取入库编排
 
-**Files:**
-- Create: `src/main/java/cn/name/celestrong/signalbrief/feed/FeedClient.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/feed/HttpFeedClient.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/feed/FeedFetchException.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionResult.java`
-- Create: `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionService.java`
-- Test: `src/test/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionServiceTest.java`
+**文件：**
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/feed/FeedClient.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/feed/HttpFeedClient.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/feed/FeedFetchException.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionResult.java`
+- 创建：`src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionService.java`
+- 测试：`src/test/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionServiceTest.java`
 
-- [ ] **Step 1: Write failing orchestration tests**
+- [ ] **步骤 1：编写编排失败测试**
 
-Create `src/test/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionServiceTest.java`:
+创建 `src/test/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionServiceTest.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.ingestion;
@@ -1313,17 +1313,17 @@ class FeedIngestionServiceTest {
 }
 ```
 
-- [ ] **Step 2: Run orchestration test and verify it fails**
+- [ ] **步骤 2：运行编排测试并确认失败**
 
 ```bash
 ./mvnw -B -Dtest=FeedIngestionServiceTest test
 ```
 
-Expected: compilation fails because orchestration classes do not exist.
+预期：编译失败，因为编排相关类尚不存在。
 
-- [ ] **Step 3: Add feed client boundary and HTTP implementation**
+- [ ] **步骤 3：添加 feed client 边界和 HTTP 实现**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/feed/FeedClient.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/feed/FeedClient.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.feed;
@@ -1338,7 +1338,7 @@ public interface FeedClient {
 }
 ```
 
-Create `src/main/java/cn/name/celestrong/signalbrief/feed/FeedFetchException.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/feed/FeedFetchException.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.feed;
@@ -1351,7 +1351,7 @@ public class FeedFetchException extends RuntimeException {
 }
 ```
 
-Create `src/main/java/cn/name/celestrong/signalbrief/feed/HttpFeedClient.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/feed/HttpFeedClient.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.feed;
@@ -1395,9 +1395,9 @@ public class HttpFeedClient implements FeedClient {
 }
 ```
 
-- [ ] **Step 4: Add ingestion result and service**
+- [ ] **步骤 4：添加入库结果和服务**
 
-Create `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionResult.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionResult.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.ingestion;
@@ -1425,7 +1425,7 @@ public record FeedIngestionResult(
 }
 ```
 
-Create `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionService.java`:
+创建 `src/main/java/cn/name/celestrong/signalbrief/ingestion/FeedIngestionService.java`：
 
 ```java
 package cn.name.celestrong.signalbrief.ingestion;
@@ -1499,15 +1499,15 @@ public class FeedIngestionService {
 }
 ```
 
-- [ ] **Step 5: Run orchestration test**
+- [ ] **步骤 5：运行编排测试**
 
 ```bash
 ./mvnw -B -Dtest=FeedIngestionServiceTest test
 ```
 
-Expected: build success.
+预期：构建成功。
 
-- [ ] **Step 6: Commit orchestration task**
+- [ ] **步骤 6：提交编排任务**
 
 ```bash
 git add src/main/java/cn/name/celestrong/signalbrief/feed/FeedClient.java \
@@ -1520,14 +1520,14 @@ git commit -m "feat(feed): 编排 RSS 抓取入库"
 
 ---
 
-### Task 6: Documentation and Final Verification
+### 任务 6：文档与最终验证
 
-**Files:**
-- Modify: `README.md`
+**文件：**
+- 修改：`README.md`
 
-- [ ] **Step 1: Add README configuration example**
+- [ ] **步骤 1：添加 README 配置示例**
 
-Modify `README.md` by adding this section under “配置说明”:
+在 `README.md` 的“配置说明”下添加以下小节：
 
 ````markdown
 ### RSS 源配置
@@ -1546,17 +1546,17 @@ signal-brief:
 第一版 RSS 源不入库；修改源配置后需要重启应用。
 ````
 
-- [ ] **Step 2: Run unit test suite**
+- [ ] **步骤 2：运行单元测试套件**
 
 ```bash
 ./mvnw -B test
 ```
 
-Expected: build success.
+预期：构建成功。
 
-- [ ] **Step 3: Run full verification with PostgreSQL**
+- [ ] **步骤 3：使用 PostgreSQL 运行完整验证**
 
-Start PostgreSQL through the project Compose setup or an equivalent local database, then run:
+通过项目 Compose 配置或等价的本地数据库启动 PostgreSQL，然后运行：
 
 ```bash
 SPRING_PROFILES_ACTIVE=test \
@@ -1567,17 +1567,17 @@ SERVER_PORT=8080 \
 ./mvnw -B verify
 ```
 
-Expected: build success.
+预期：构建成功。
 
-- [ ] **Step 4: Confirm no misspelled datasource variable remains**
+- [ ] **步骤 4：确认错误拼写的数据源变量不再存在**
 
 ```bash
 rg --hidden -n "SPRING_DATASOURCE_UERNAME" -g '!target' -g '!.git' .
 ```
 
-Expected: no output and exit code 1.
+预期：无输出，退出码为 1。
 
-- [ ] **Step 5: Commit documentation and verification updates**
+- [ ] **步骤 5：提交文档和验证更新**
 
 ```bash
 git add README.md
@@ -1586,14 +1586,14 @@ git commit -m "docs: 说明 RSS 源配置"
 
 ---
 
-## Spec Coverage Checklist
+## 规格覆盖检查清单
 
-- YAML feed source configuration: Task 1 and Task 6.
-- ROME RSS / Atom parsing: Task 2.
-- Article database schema: Task 3.
-- Deduplication by `guid`, `url`, and `content_hash`: Task 3 and Task 4.
-- PostgreSQL persistence through MyBatis: Task 3.
-- Batch ingestion service and execution statistics: Task 5.
-- Error handling that continues after one source fails: Task 5.
-- Automated tests without 真实公网 RSS: Task 2, Task 4, Task 5.
-- Final `test` and PostgreSQL-backed `verify`: Task 6.
+- YAML RSS 源配置：任务 1 和任务 6。
+- ROME RSS / Atom 解析：任务 2。
+- 文章数据库结构：任务 3。
+- 按 `guid`、`url`、`content_hash` 去重：任务 3 和任务 4。
+- 通过 MyBatis 持久化到 PostgreSQL：任务 3。
+- 批量入库服务和执行统计：任务 5。
+- 单个源失败后继续处理的错误处理：任务 5。
+- 不依赖真实公网 RSS 的自动化测试：任务 2、任务 4、任务 5。
+- 最终 `test` 和基于 PostgreSQL 的 `verify`：任务 6。
