@@ -4,7 +4,7 @@ spring:
       enabled: false
   datasource:
     driver-class-name: org.postgresql.Driver
-    username: ${SPRING_DATASOURCE_UERNAME}
+    username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     url: ${SPRING_DATASOURCE_URL}
 server:
