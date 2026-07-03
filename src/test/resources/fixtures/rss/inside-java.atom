@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Inside Java</title>
+  <link href="https://inside.java/feed.xml"/>
+  <updated>2026-07-02T08:30:00Z</updated>
+  <entry>
+    <title>JDK update notes</title>
+    <link href="https://inside.java/2026/07/02/jdk-update-notes"/>
+    <id>inside-java-jdk-update-notes</id>
+    <updated>2026-07-02T08:30:00Z</updated>
+    <summary>Notes from the Java team.</summary>
+  </entry>
+</feed>

@@ -1,0 +1,70 @@
+package cn.name.celestrong.signalbrief.article;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.jdbc.Sql;
+
+import java.time.Instant;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@SpringBootTest
+@Sql(statements = "TRUNCATE TABLE article RESTART IDENTITY", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+class ArticleMapperIT {
+
+    @Autowired
+    private ArticleMapper articleMapper;
+
+    @Test
+    void insertsAndFindsArticleByUrl() {
+        NewArticle article = sampleArticle("mapper-url-1", "https://example.com/article-1", "hash-001");
+
+        int insertedRows = articleMapper.insertIfAbsent(article);
+
+        assertEquals(1, insertedRows);
+        assertTrue(articleMapper.existsByUrl("https://example.com/article-1"));
+    }
+
+    @Test
+    void skipsDuplicateUrl() {
+        NewArticle first = sampleArticle("mapper-url-2", "https://example.com/article-2", "hash-002");
+        NewArticle duplicateUrl = sampleArticle("mapper-url-3", "https://example.com/article-2", "hash-003");
+
+        assertEquals(1, articleMapper.insertIfAbsent(first));
+        assertEquals(0, articleMapper.insertIfAbsent(duplicateUrl));
+    }
+
+    @Test
+    void skipsDuplicateSourceGuid() {
+        NewArticle first = sampleArticle("mapper-guid", "https://example.com/article-3", "hash-004");
+        NewArticle duplicateGuid = sampleArticle("mapper-guid", "https://example.com/article-4", "hash-005");
+
+        assertEquals(1, articleMapper.insertIfAbsent(first));
+        assertEquals(0, articleMapper.insertIfAbsent(duplicateGuid));
+    }
+
+    @Test
+    void skipsDuplicateContentHash() {
+        NewArticle first = sampleArticle("mapper-hash-1", "https://example.com/article-5", "hash-006");
+        NewArticle duplicateHash = sampleArticle("mapper-hash-2", "https://example.com/article-6", "hash-006");
+
+        assertEquals(1, articleMapper.insertIfAbsent(first));
+        assertEquals(0, articleMapper.insertIfAbsent(duplicateHash));
+    }
+
+    private NewArticle sampleArticle(String guid, String url, String contentHash) {
+        return new NewArticle(
+                "Test Source",
+                "https://example.com/feed.xml",
+                ArticleCategory.JAVA,
+                "Test Article " + guid,
+                url,
+                guid,
+                Instant.parse("2026-07-03T00:00:00Z"),
+                "Summary",
+                contentHash
+        );
+    }
+}
