@@ -25,4 +25,7 @@ spring:
         await-termination-period: 30s
 
 signal-brief:
+  ingestion:
+    enabled: ${SIGNAL_BRIEF_INGESTION_ENABLED:false}
+    cron: "${SIGNAL_BRIEF_INGESTION_CRON:0 0 6 1,16 * *}"
   feeds: []

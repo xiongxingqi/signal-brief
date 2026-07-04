@@ -118,6 +118,9 @@ RSS 源通过 `signal-brief.feeds` 配置：
 
 ```yaml
 signal-brief:
+  ingestion:
+    enabled: false
+    cron: "0 0 6 1,16 * *"
   feeds:
     - name: Spring Blog
       url: https://spring.io/blog.atom
@@ -126,6 +129,14 @@ signal-brief:
 ```
 
 第一版 RSS 源不入库；修改源配置后需要重启应用。
+
+RSS 入库任务默认关闭，避免本地启动时自动访问外部源。如需开启：
+
+```bash
+SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boot:run
+```
+
+默认 cron 为 `0 0 6 1,16 * *`，表示每月 1 日和 16 日 06:00 执行。可通过 `SIGNAL_BRIEF_INGESTION_CRON` 覆盖。
 
 ## 项目结构
 
