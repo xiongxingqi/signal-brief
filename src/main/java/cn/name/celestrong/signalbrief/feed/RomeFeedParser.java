@@ -12,12 +12,18 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * 基于 ROME 的 RSS / Atom 解析实现。
+ *
+ * <p>解析时保留原始输入流，让 XmlReader 处理 BOM 和 XML 声明中的编码信息。</p>
+ */
 @Component
 public class RomeFeedParser implements FeedParser {
 
     @Override
     public List<FetchedArticle> parse(FeedProperties.FeedSource source, InputStream inputStream) {
         try {
+            // 不提前解码为 String，避免破坏 GBK 等非 UTF-8 feed 的编码识别。
             SyndFeed feed = new SyndFeedInput().build(new XmlReader(inputStream));
             return feed.getEntries().stream()
                     .map(entry -> toFetchedArticle(source, entry))

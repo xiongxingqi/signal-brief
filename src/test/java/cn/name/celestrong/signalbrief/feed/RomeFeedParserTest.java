@@ -12,6 +12,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+/**
+ * RSS fixture 覆盖 RSS 2.0 和 Atom 两类格式，防止解析器只适配单一 feed 结构。
+ */
 class RomeFeedParserTest {
 
     private final RomeFeedParser parser = new RomeFeedParser();

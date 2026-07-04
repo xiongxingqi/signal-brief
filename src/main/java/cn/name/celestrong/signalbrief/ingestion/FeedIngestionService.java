@@ -12,6 +12,11 @@ import org.springframework.stereotype.Service;
 import java.io.InputStream;
 import java.util.List;
 
+/**
+ * RSS 入库批次编排服务。
+ *
+ * <p>单个源失败只影响当前源，批次继续处理后续源，并在结果中累计失败源数量。</p>
+ */
 @Service
 public class FeedIngestionService {
 
@@ -51,6 +56,7 @@ public class FeedIngestionService {
     }
 
     private FeedIngestionResult ingestSource(FeedProperties.FeedSource source) {
+        // FeedClient 契约要求调用方关闭输入流，避免远程响应或临时资源泄露。
         try (InputStream inputStream = feedClient.fetch(source)) {
             List<FetchedArticle> articles = feedParser.parse(source, inputStream);
             int insertedCount = 0;

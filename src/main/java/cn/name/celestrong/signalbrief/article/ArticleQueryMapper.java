@@ -9,9 +9,19 @@ import org.apache.ibatis.annotations.Select;
 import java.time.Instant;
 import java.util.List;
 
+/**
+ * 简报候选文章查询 Mapper。
+ *
+ * <p>该 Mapper 使用构造器映射，SQL 列别名需要与 {@code Article} record 构造参数保持同步。</p>
+ */
 @Mapper
 public interface ArticleQueryMapper {
 
+    /**
+     * 查询指定时间窗口内可进入简报的文章。
+     *
+     * <p>时间窗口使用半开区间，文章有效时间优先取 published_at，缺失时回退 created_at。</p>
+     */
     @Select("""
             SELECT
                 id,

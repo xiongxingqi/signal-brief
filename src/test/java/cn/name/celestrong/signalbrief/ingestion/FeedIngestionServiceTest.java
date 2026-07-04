@@ -18,6 +18,9 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * 使用手写 fake 保留批次统计和单源失败隔离语义，避免 mock 配置掩盖编排流程。
+ */
 class FeedIngestionServiceTest {
 
     @Test

@@ -12,6 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * 使用 ApplicationContextRunner 验证条件装配，不启动完整 Spring Boot 应用。
+ */
 class FeedIngestionSchedulerTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
@@ -71,6 +74,9 @@ class FeedIngestionSchedulerTest {
             super(null, null, null, null);
         }
 
+        /**
+         * 只记录调度调用次数，避免测试触发真实抓取链路。
+         */
         @Override
         public FeedIngestionResult ingestEnabledFeeds() {
             calls++;

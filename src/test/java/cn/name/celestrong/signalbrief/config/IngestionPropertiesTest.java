@@ -33,6 +33,7 @@ class IngestionPropertiesTest {
                     cron: "0 30 7 * * *"
                 """;
 
+        // 通过 Spring Binder 读取 YAML，覆盖真实配置绑定路径，而不是只测试 record 构造器。
         StandardEnvironment environment = new StandardEnvironment();
         MutablePropertySources propertySources = environment.getPropertySources();
         propertySources.addFirst(new YamlPropertySourceLoader().load(

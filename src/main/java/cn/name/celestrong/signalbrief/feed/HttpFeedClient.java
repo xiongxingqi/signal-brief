@@ -10,6 +10,11 @@ import org.springframework.web.client.RestClient;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
+/**
+ * 基于 Spring RestClient 的 feed 获取实现。
+ *
+ * <p>HTTP 细节限制在该类内，对上层仍暴露 {@code InputStream}，避免解析层感知具体客户端。</p>
+ */
 @Component
 public class HttpFeedClient implements FeedClient {
 
@@ -36,6 +41,7 @@ public class HttpFeedClient implements FeedClient {
                         }
                         return StreamUtils.copyToByteArray(response.getBody());
                     });
+            // exchange 回调结束后响应体会关闭，这里转为可由解析器继续读取的内存流。
             return new ByteArrayInputStream(feedBytes);
         } catch (FeedFetchException ex) {
             throw ex;

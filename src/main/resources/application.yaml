@@ -2,7 +2,7 @@ spring:
   application:
     name: signal-brief
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    active: ${SPRING_PROFILES_ACTIVE}
   flyway:
     callback-locations: classpath:db/callback
     locations: classpath:db/migration

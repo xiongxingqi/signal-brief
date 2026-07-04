@@ -22,6 +22,9 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+/**
+ * 使用 MockRestServiceServer 验证 RestClient 边界，避免测试访问真实外部 RSS 源。
+ */
 class HttpFeedClientTest {
 
     @Test

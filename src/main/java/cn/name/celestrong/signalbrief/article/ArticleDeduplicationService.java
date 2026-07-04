@@ -9,6 +9,11 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
 
+/**
+ * 文章去重服务。
+ *
+ * <p>去重顺序与数据库唯一索引保持一致：优先 guid，其次 URL，最后使用内容哈希兜底。</p>
+ */
 @Service
 public class ArticleDeduplicationService {
 
@@ -18,6 +23,11 @@ public class ArticleDeduplicationService {
         this.articleMapper = articleMapper;
     }
 
+    /**
+     * 判断文章是否已经存在。
+     *
+     * <p>guid 只在同一来源内比较，URL 和内容哈希在全表范围内比较。</p>
+     */
     public boolean exists(FetchedArticle article) {
         if (hasText(article.guid())) {
             return articleMapper.existsBySourceNameAndGuid(article.sourceName(), article.guid());
@@ -28,6 +38,11 @@ public class ArticleDeduplicationService {
         return articleMapper.existsByContentHash(contentHash(article));
     }
 
+    /**
+     * 生成无 guid、无 URL 场景下的兜底去重键。
+     *
+     * <p>该算法会影响历史文章的重复判断，调整时必须同步评估数据库唯一索引和已有数据。</p>
+     */
     public String contentHash(FetchedArticle article) {
         String source = normalize(article.title())
                 + "|"

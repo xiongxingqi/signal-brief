@@ -11,7 +11,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * 使用真实 SQL 验证简报查询口径，尤其是时间窗口、created_at 回退和稳定排序。
+ */
 @SpringBootTest
+// 查询排序和时间回退依赖数据库状态，测试前清表能让每个用例独立。
 @Sql(statements = "TRUNCATE TABLE article RESTART IDENTITY", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class ArticleQueryMapperIT {
 

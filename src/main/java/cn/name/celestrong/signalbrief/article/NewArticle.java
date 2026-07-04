@@ -2,6 +2,11 @@ package cn.name.celestrong.signalbrief.article;
 
 import java.time.Instant;
 
+/**
+ * 新文章入库命令。
+ *
+ * <p>只包含应用侧可写字段，数据库生成的 id、created_at 和 updated_at 不进入该模型。</p>
+ */
 public record NewArticle(
         String sourceName,
         String sourceUrl,

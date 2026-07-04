@@ -10,6 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * 这些测试需要锁定去重短路顺序，因此使用可记录调用次数的手写 fake。
+ */
 class ArticleDeduplicationServiceTest {
 
     @Test

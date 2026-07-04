@@ -6,6 +6,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.net.URI;
 import java.util.List;
 
+/**
+ * RSS 源配置根对象。
+ *
+ * <p>配置在绑定后复制为不可变列表，避免批次执行过程中被外部修改影响。</p>
+ */
 @ConfigurationProperties(prefix = "signal-brief")
 public record FeedProperties(List<FeedSource> feeds) {
 
@@ -19,6 +24,11 @@ public record FeedProperties(List<FeedSource> feeds) {
                 .toList();
     }
 
+    /**
+     * 单个 RSS / Atom 源的配置项。
+     *
+     * <p>源名称、地址和分类是入库、去重和后续简报分组的稳定上下文。</p>
+     */
     public record FeedSource(
             String name,
             URI url,

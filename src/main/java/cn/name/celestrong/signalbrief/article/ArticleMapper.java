@@ -5,9 +5,19 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+/**
+ * 文章写入与去重查询 Mapper。
+ *
+ * <p>写入路径和后续简报查询路径分离，避免在同一个 Mapper 中混杂不同读写模型。</p>
+ */
 @Mapper
 public interface ArticleMapper {
 
+    /**
+     * 插入新文章；如命中数据库唯一索引则跳过。
+     *
+     * @return 实际插入行数，0 表示被唯一约束判定为重复
+     */
     @Insert("""
             INSERT INTO article (
                 source_name,

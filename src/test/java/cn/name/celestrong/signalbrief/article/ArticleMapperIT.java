@@ -10,7 +10,11 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * 使用真实数据库约束验证 MyBatis 写入行为，覆盖应用层之外的唯一索引兜底。
+ */
 @SpringBootTest
+// 每个用例独占一张空表，避免唯一索引冲突和自增 id 影响后续断言。
 @Sql(statements = "TRUNCATE TABLE article RESTART IDENTITY", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class ArticleMapperIT {
 
