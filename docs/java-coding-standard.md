@@ -19,6 +19,7 @@
 - 不为局部“优雅”破坏全局一致性。
 - 新增抽象必须降低真实复杂度，不能只是换一种写法。
 - 修改代码时控制边界，不顺手做无关重构。
+- 本项目优先沿用 Spring Boot、MyBatis、Flyway、ROME 和 PostgreSQL 的现有边界，不为局部代码引入另一套并行方案。
 
 ## 文件与格式
 
@@ -43,6 +44,8 @@ Java 源文件顺序保持稳定：
 - 文件名必须和 public 顶层类型名一致。
 - 类成员顺序应有明确逻辑，例如常量、字段、构造器、公开方法、私有方法。
 - 重载方法不要被其他成员打散。
+- 包结构按业务边界组织。当前主要边界包括 `feed`、`article`、`ingestion` 和 `config`，新增代码优先放入最贴近的现有包。
+- 配置绑定类放在 `config` 包，使用 `@ConfigurationProperties` 表达配置结构，不在业务代码中直接读取散落的环境变量。
 
 ### import
 
@@ -50,6 +53,7 @@ Java 源文件顺序保持稳定：
 - 删除未使用 import。
 - 生产代码谨慎使用 static import；测试代码可以用于断言、mock DSL 等明显提升可读性的场景。
 - import 排序交给 IDE 或 formatter，避免人工反复调整。
+- 不引入没有使用到的依赖；新增依赖前先确认 JDK、Spring、Apache Commons 或 Guava 是否已经覆盖该能力。
 
 ### 格式
 
@@ -112,7 +116,6 @@ boolean type;
 - 能不可变就不可变，优先使用 `final`。
 - 不为测试随意放大字段或方法可见性。
 
-
 ## 方法设计
 
 ### 方法职责
@@ -153,11 +156,14 @@ updateUser(userId, UpdateMode.FORCE_WITH_NOTIFICATION);
 - 单值可能不存在时，可以使用 `Optional`，但不要把 `Optional` 用作字段、DTO 属性或集合元素，除非项目已有明确约定。
 - 方法有副作用时，方法名应清楚表达副作用。
 - 返回集合时明确是否允许修改；如果调用方不应修改，返回不可变集合或只读视图。
+- 对外暴露的时间窗口使用半开区间命名，例如 `startInclusive`、`endExclusive`，避免边界含义不清。
+- 时间类型优先使用 `Instant` 表达机器时间；只有在展示或用户输入场景才转换为本地日期时间。
 
 ## 枚举、常量和值对象
 
 - 禁止在业务代码中散落魔法值。
 - 状态、类型、渠道、权限、来源等固定取值优先使用枚举。
+- 分类、状态、执行结果等固定取值优先建模为枚举。当前文章分类统一使用 `ArticleCategory`，不要用字符串在业务代码中绕过类型约束。
 - 枚举命名表达业务语义，不表达数据库值。
 - 常量名必须解释业务意义，而不只是重复数值。
 
@@ -184,6 +190,7 @@ private static final int POST_VISIBLE_DAYS_FOR_HALF_YEAR = 180;
 - 不使用模糊异常信息，例如“失败了”“出错了”。
 - 包装异常时保留原始 cause。
 - 不把底层 SQL、密钥、token、内部路径等敏感信息直接暴露给用户。
+- 低频批处理场景允许单个 RSS 源失败后继续处理后续源，但必须记录源名称、失败原因和统计结果。
 
 ## 工具库与生态选型
 
@@ -194,6 +201,7 @@ private static final int POST_VISIBLE_DAYS_FOR_HALF_YEAR = 180;
 - 新代码不要使用 Guava `Optional`，统一使用 `java.util.Optional`。
 - HTTP 客户端统一优先使用 Spring `RestClient`。配置应集中管理超时、默认 header、错误处理和日志，不在业务代码中直接散落底层 HTTP 客户端。
 - JSON 解析和序列化优先使用 Spring 生态的 Jackson 能力，例如 Spring 管理的 `ObjectMapper`、`JsonNode`、record/DTO 映射和 HTTP message converter。不要随意引入 Gson、Fastjson 或手动 `new ObjectMapper()`。
+- Spring Boot 已管理版本的依赖不要显式声明版本；只有项目额外引入且未被 Boot 管理的依赖，才在 `pom.xml` 属性中集中声明版本。
 
 ## Spring 使用约定
 
@@ -207,6 +215,24 @@ private static final int POST_VISIBLE_DAYS_FOR_HALF_YEAR = 180;
 - `@Transactional` 优先放在 Service 层公开业务方法上。
 - 避免同类内部方法调用导致事务、缓存、异步等代理失效。
 - Bean 名称、Profile、条件装配要能从命名看出用途。
+- `@Scheduled` 任务必须可配置关闭，默认避免本地启动、测试或 CI 意外访问外部网络。
+- 外部调用、定时任务和邮件等副作用入口要集中配置超时、开关、默认 header 或收件人，不在业务方法里硬编码。
+
+## MyBatis 与数据库
+
+- 数据库结构变更必须通过 Flyway 迁移脚本表达，不手工依赖本地库状态。
+- Java record 或不可变对象使用 MyBatis 构造器映射时，SQL 列别名、`@Arg` 名称和构造参数语义必须一致。
+- SQL 中使用清晰的列别名，避免把下划线字段、Java 字段和 record 构造参数混在一起猜。
+- 写入路径和查询路径可以拆分 Mapper。当前 `ArticleMapper` 负责写入与去重，`ArticleQueryMapper` 负责简报候选查询。
+- 去重规则必须同时考虑应用层判断和数据库唯一约束，不能只改一侧。
+- 查询时间窗口统一使用 `[startInclusive, endExclusive)`；涉及文章有效时间时，当前口径为 `COALESCE(published_at, created_at)`。
+
+## RSS、HTTP 与内容处理
+
+- RSS / Atom 内容交给 ROME 解析；不要在解析前把响应体强制转为 `String`，保留 `InputStream` 以便 XML 解析器处理 BOM 和 XML 声明中的编码。
+- HTTP 获取统一走 Spring `RestClient`，底层实现由依赖和集中配置决定，业务代码不直接依赖 Apache HttpClient API。
+- 单个 feed 的抓取、解析和入库错误要隔离，不能影响整个批次。
+- 外部源返回的标题、摘要和链接都视为不可信输入；后续用于邮件或 HTML 时必须清理或转义。
 
 ## Lombok 使用
 
@@ -216,11 +242,22 @@ private static final int POST_VISIBLE_DAYS_FOR_HALF_YEAR = 180;
 - 对 equals/hashCode 有业务含义的类必须谨慎，尤其是 Entity。
 - 如果 getter/setter 有业务约束，直接手写，不依赖 Lombok 默认生成。
 
+## 测试代码
+
+- 纯业务逻辑优先写普通 JUnit 5 单元测试，不启动 Spring 上下文。
+- 需要 Mockito 注解、自动创建 mock 或 strict stubbing 时使用 `@ExtendWith(MockitoExtension.class)`；简单协作对象可以用手写 fake 或 recording stub。
+- 数据库、迁移和 Mapper 行为使用 `*IT` 集成测试覆盖，由 Maven Failsafe 在 `verify` 阶段运行。
+- 本地日常默认只跑 `./mvnw test`；需要避免 Spring Boot Docker Compose 接管时设置 `-Dspring.docker.compose.enabled=false`。
+- 测试 fixture 放在 `src/test/resources`，命名表达来源和场景，不把运行时生成数据混入 fixture。
 
 ## 注释与 Javadoc
 
+- 注释密度参考 Spring 等成熟开源框架，默认保持克制。
+- 只在公共契约、框架扩展点、非显而易见的业务约束、兼容性取舍、并发、事务、资源生命周期等位置补充 Javadoc 或短注释。
 - 注释解释代码本身看不出来的原因、约束和取舍。
-- 不写“给变量赋值”“循环列表”这类翻译型注释。
+- 不写“给变量赋值”“循环列表”“判断是否公开”这类翻译型注释。
+- 不为直观代码、简单字段和常规 getter/setter 写解释性注释。
+- 如代码需要大量注释才能读懂，优先重命名、拆分方法或提取对象。
 - 公共 API、复杂业务规则、安全约束、兼容旧逻辑要写明行为约定。
 - `TODO` 必须可检索，最好带 issue、日期或明确触发条件。
 
@@ -235,8 +272,6 @@ private static final int POST_VISIBLE_DAYS_FOR_HALF_YEAR = 180;
 ```java
 // 判断是否公开
 ```
-
-
 
 ## 参考
 

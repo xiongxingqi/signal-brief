@@ -155,7 +155,8 @@ SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boot:run
 ## 文档
 
 - [立项文档](docs/personal-tech-newsletter-system.md)
-- [RSS 抓取入库备忘](docs/rss-ingestion.md)
+- [RSS 抓取入库备忘](docs/records/rss-ingestion.md)
+- [RSS 入库任务化与文章查询出口记录](docs/records/2026-07-04-rss-ingestion-scheduling.md)
 - [Git 提交规范](docs/git-commit-convention.md)
 - [贡献者指南](AGENTS.md)
 
