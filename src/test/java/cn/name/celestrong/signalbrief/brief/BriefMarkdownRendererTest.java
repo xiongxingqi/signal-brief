@@ -74,12 +74,14 @@ class BriefMarkdownRendererTest {
                 - 来源：InfoQ
                 - 发布时间：2026-07-02 09:15:30 UTC
                 - 链接：https://example.com/java-25
+
                 新版本发布摘要。
 
                 ### Baeldung: 虚拟线程实践
                 - 来源：Baeldung
                 - 发布时间：2026-07-03 10:00:00 UTC
                 - 链接：https://example.com/virtual-thread
+
                 暂无摘要。
 
                 ## AI
@@ -87,6 +89,7 @@ class BriefMarkdownRendererTest {
                 ### AI Daily: 模型更新
                 - 来源：AI Daily
                 - 发布时间：未知
+
                 AI 新闻摘要。
                 """, markdown);
     }
@@ -103,6 +106,13 @@ class BriefMarkdownRendererTest {
                         - 摘要_[1]
                         # 第二行 `code`
                         > 第三行 *重点*
+                          + 缩进加号列表
+                          23) 缩进有序列表
+                        ---
+                        ***
+                        ___
+                          > 缩进引用
+                          - 缩进短横列表
                         C:\\tmp\\brief
                         """
         );
@@ -124,9 +134,17 @@ class BriefMarkdownRendererTest {
                 - 来源：\\# Source\\_\\[A\\]
                 - 发布时间：2026-07-04 08:00:00 UTC
                 - 链接：https://example.com/a_[b]*c
+
                 \\- 摘要\\_\\[1\\]
                 \\# 第二行 \\`code\\`
                 \\> 第三行 \\*重点\\*
+                  \\+ 缩进加号列表
+                  \\23) 缩进有序列表
+                \\---
+                \\*\\*\\*
+                \\_\\_\\_
+                  \\> 缩进引用
+                  \\- 缩进短横列表
                 C:\\\\tmp\\\\brief
                 """, markdown);
     }

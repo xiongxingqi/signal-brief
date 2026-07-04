@@ -86,6 +86,7 @@ public class BriefMarkdownRenderer {
                     .append("\n");
         }
         String summary = StringUtils.trimToNull(article.summary());
+        markdown.append("\n");
         markdown.append(summary == null ? "暂无摘要。" : escapeMarkdownText(summary))
                 .append("\n");
     }
@@ -100,14 +101,11 @@ public class BriefMarkdownRenderer {
         }
 
         StringBuilder escaped = new StringBuilder(text.length());
-        boolean atLineStart = true;
+        int lineStartIndex = 0;
         for (int index = 0; index < text.length(); index++) {
             char current = text.charAt(index);
-            if (atLineStart && (current == '#' || current == '>')) {
-                escaped.append('\\');
-            } else if (atLineStart && current == '-' && index + 1 < text.length() && text.charAt(index + 1) == ' ') {
-                escaped.append('\\');
-            } else if (current == '\\'
+            if (isMarkdownBlockPrefix(text, lineStartIndex, index)
+                    || current == '\\'
                     || current == '`'
                     || current == '*'
                     || current == '_'
@@ -117,8 +115,78 @@ public class BriefMarkdownRenderer {
             }
 
             escaped.append(current);
-            atLineStart = current == '\n';
+            if (current == '\n') {
+                lineStartIndex = index + 1;
+            }
         }
         return escaped.toString();
+    }
+
+    private boolean isMarkdownBlockPrefix(String text, int lineStartIndex, int index) {
+        if (index < lineStartIndex || text.charAt(index) == ' ') {
+            return false;
+        }
+
+        int leadingSpaces = index - lineStartIndex;
+        if (leadingSpaces > 3 || !isOnlySpaces(text, lineStartIndex, index)) {
+            return false;
+        }
+
+        char current = text.charAt(index);
+        return current == '#'
+                || current == '>'
+                || isUnorderedListPrefix(text, index)
+                || isOrderedListPrefix(text, index)
+                || isThematicBreak(text, index);
+    }
+
+    private boolean isOnlySpaces(String text, int startInclusive, int endExclusive) {
+        for (int index = startInclusive; index < endExclusive; index++) {
+            if (text.charAt(index) != ' ') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isUnorderedListPrefix(String text, int index) {
+        char current = text.charAt(index);
+        return (current == '-' || current == '+' || current == '*')
+                && index + 1 < text.length()
+                && text.charAt(index + 1) == ' ';
+    }
+
+    private boolean isOrderedListPrefix(String text, int index) {
+        if (!Character.isDigit(text.charAt(index))) {
+            return false;
+        }
+
+        int cursor = index;
+        while (cursor < text.length() && Character.isDigit(text.charAt(cursor))) {
+            cursor++;
+        }
+        return cursor + 1 < text.length()
+                && (text.charAt(cursor) == '.' || text.charAt(cursor) == ')')
+                && text.charAt(cursor + 1) == ' ';
+    }
+
+    private boolean isThematicBreak(String text, int index) {
+        char marker = text.charAt(index);
+        if (marker != '-' && marker != '*' && marker != '_') {
+            return false;
+        }
+
+        int markerCount = 0;
+        int cursor = index;
+        while (cursor < text.length() && text.charAt(cursor) != '\n') {
+            char current = text.charAt(cursor);
+            if (current == marker) {
+                markerCount++;
+            } else if (current != ' ') {
+                return false;
+            }
+            cursor++;
+        }
+        return markerCount >= 3;
     }
 }
