@@ -56,7 +56,7 @@ cp .env.example .env
 docker compose up -d postgres
 ```
 
-如果手动启动 Compose，请用 `docker compose ps` 确认 PostgreSQL 映射到宿主机的端口，并在 `.env` 中调整 `SPRING_DATASOURCE_URL`。
+默认会把 PostgreSQL 映射到宿主机 `5432` 端口；如需改端口，在 `.env` 中设置 `POSTGRES_PORT`，并同步调整 `SPRING_DATASOURCE_URL`。
 
 启动应用：
 

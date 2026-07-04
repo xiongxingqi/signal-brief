@@ -1,10 +1,23 @@
 name: signal-brief
+
 services:
   postgres:
-    image: 'postgres:latest'
+    image: postgres:17
+    restart: unless-stopped
     environment:
-      - 'POSTGRES_DB=${POSTGRES_DB:-signal_brief}'
-      - 'POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-123456}'
-      - 'POSTGRES_USER=${POSTGRES_USER:-celestrong}'
+      POSTGRES_DB: ${POSTGRES_DB:-signal_brief}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_USER: ${POSTGRES_USER:-celestrong}
     ports:
-      - '5432'
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-celestrong} -d ${POSTGRES_DB:-signal_brief}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres-data:
