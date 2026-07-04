@@ -61,14 +61,10 @@ docker compose up -d postgres
 启动应用：
 
 ```bash
-./mvnw spring-boot:run
+SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 ```
 
-默认 profile 为 `dev`，可通过环境变量切换：
-
-```bash
-SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run
-```
+应用启动必须显式设置 `SPRING_PROFILES_ACTIVE`，本地开发通常使用 `dev`。
 
 ## 常用命令
 
@@ -94,7 +90,7 @@ SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run
 
 核心配置文件：
 
-- `src/main/resources/application.yaml`：通用配置、profile 默认值、Flyway 路径、线程池配置。
+- `src/main/resources/application.yaml`：通用配置、profile 入口、Flyway 路径、线程池配置。
 - `src/main/resources/application-dev.yaml`：本地开发配置。
 - `src/main/resources/application-prod.yaml`：生产环境配置。
 - `src/test/resources/application-test.yaml`：测试环境配置。
@@ -133,7 +129,7 @@ signal-brief:
 RSS 入库任务默认关闭，避免本地启动时自动访问外部源。如需开启：
 
 ```bash
-SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boot:run
+SPRING_PROFILES_ACTIVE=dev SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boot:run
 ```
 
 默认 cron 为 `0 0 6 1,16 * *`，表示每月 1 日和 16 日 06:00 执行。可通过 `SIGNAL_BRIEF_INGESTION_CRON` 覆盖。

@@ -59,7 +59,7 @@ signal-brief:
 开启示例：
 
 ```bash
-SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boot:run
+SPRING_PROFILES_ACTIVE=dev SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boot:run
 ```
 
 本地测试和 CI 都应显式设置 `SPRING_DOCKER_COMPOSE_ENABLED=false`，避免 Spring Boot 测试进程接管本地 `compose.yaml`。
