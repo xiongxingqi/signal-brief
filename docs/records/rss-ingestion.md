@@ -1,6 +1,6 @@
 # RSS 抓取入库记录
 
-> 本文档记录 RSS 抓取、解析、去重、入库和查询出口的当前设计。源清单与 HTTP 抓取可靠性细节见 [RSS 源清单与抓取可靠性记录](rss-source-reliability.md)。实现细节以源码、迁移脚本和测试为准。
+> 本文档记录 RSS 抓取、解析、去重、入库和查询出口的当前设计。源清单与 HTTP 抓取可靠性细节见 [RSS 源清单与抓取可靠性记录](rss-source-reliability.md)，运行记录细节见 [RSS 入库运行记录](rss-ingestion-run-record.md)。实现细节以源码、迁移脚本和测试为准。
 
 ## 定位
 
