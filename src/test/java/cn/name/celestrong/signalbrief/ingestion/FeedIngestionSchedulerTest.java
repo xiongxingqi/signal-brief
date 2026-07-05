@@ -1,14 +1,10 @@
 package cn.name.celestrong.signalbrief.ingestion;
 
-import cn.name.celestrong.signalbrief.config.FeedProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,11 +41,12 @@ class FeedIngestionSchedulerTest {
                 .withPropertyValues("signal-brief.ingestion.enabled=true")
                 .run(context -> {
                     FeedIngestionScheduler scheduler = context.getBean(FeedIngestionScheduler.class);
-                    CountingFeedIngestionService service = context.getBean(CountingFeedIngestionService.class);
+                    CountingFeedIngestionOperations operations = context.getBean(CountingFeedIngestionOperations.class);
 
                     scheduler.ingestEnabledFeeds();
 
-                    assertEquals(1, service.calls);
+                    assertTrue(operations.called);
+                    assertTrue(operations.scheduled);
                 });
     }
 
@@ -57,29 +54,19 @@ class FeedIngestionSchedulerTest {
     static class TestConfiguration {
 
         @Bean
-        FeedProperties feedProperties() {
-            return new FeedProperties(List.of());
-        }
-
-        @Bean
-        CountingFeedIngestionService feedIngestionService() {
-            return new CountingFeedIngestionService();
+        CountingFeedIngestionOperations feedIngestionOperations() {
+            return new CountingFeedIngestionOperations();
         }
     }
 
-    static class CountingFeedIngestionService extends FeedIngestionService {
-        private int calls;
+    static class CountingFeedIngestionOperations implements FeedIngestionOperations {
+        private boolean called;
+        private boolean scheduled;
 
-        CountingFeedIngestionService() {
-            super(null, null, null, null);
-        }
-
-        /**
-         * 只记录调度调用次数，避免测试触发真实抓取链路。
-         */
         @Override
-        public FeedIngestionResult ingestEnabledFeeds() {
-            calls++;
+        public FeedIngestionResult ingestEnabledFeeds(IngestionTriggerType triggerType) {
+            called = true;
+            scheduled = IngestionTriggerType.SCHEDULED == triggerType;
             return FeedIngestionResult.empty();
         }
     }

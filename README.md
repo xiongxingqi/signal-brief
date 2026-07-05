@@ -189,10 +189,17 @@ Internal 分组 OpenAPI JSON 地址：
 http://localhost:8080/internal/api-docs/internal
 ```
 
-触发一次 RSS 入库：
+触发一次 RSS 入库，响应中包含本次运行的 `runId`：
 
 ```bash
 curl -X POST http://localhost:8080/internal/ingestions/rss
+```
+
+查询 RSS 入库运行记录：
+
+```bash
+curl http://localhost:8080/internal/ingestions/rss/runs
+curl http://localhost:8080/internal/ingestions/rss/runs/12
 ```
 
 生成指定窗口的 Markdown 简报草稿：

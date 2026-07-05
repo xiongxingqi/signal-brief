@@ -1,19 +1,29 @@
 package cn.name.celestrong.signalbrief.internal;
 
 import cn.name.celestrong.signalbrief.brief.BriefGenerationService;
+import cn.name.celestrong.signalbrief.ingestion.FeedIngestionOperations;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionResult;
-import cn.name.celestrong.signalbrief.ingestion.FeedIngestionService;
+import cn.name.celestrong.signalbrief.ingestion.IngestionTriggerType;
+import cn.name.celestrong.signalbrief.ingestion.RssIngestionRun;
+import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunDetail;
+import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * 内部手动触发入口。
@@ -26,15 +36,18 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnProperty(prefix = "signal-brief.internal-api", name = "enabled", havingValue = "true")
 public class ManualTriggerController {
 
-    private final FeedIngestionService feedIngestionService;
+    private final FeedIngestionOperations feedIngestionOperations;
     private final BriefGenerationService briefGenerationService;
+    private final RssIngestionRunQueryService runQueryService;
 
     public ManualTriggerController(
-            FeedIngestionService feedIngestionService,
-            BriefGenerationService briefGenerationService
+            FeedIngestionOperations feedIngestionOperations,
+            BriefGenerationService briefGenerationService,
+            RssIngestionRunQueryService runQueryService
     ) {
-        this.feedIngestionService = feedIngestionService;
+        this.feedIngestionOperations = feedIngestionOperations;
         this.briefGenerationService = briefGenerationService;
+        this.runQueryService = runQueryService;
     }
 
     @Operation(summary = "触发 RSS 入库", description = "立即抓取所有已启用 RSS / Atom 源并执行去重入库。")
@@ -45,7 +58,36 @@ public class ManualTriggerController {
     )
     @PostMapping("/ingestions/rss")
     public FeedIngestionResult triggerRssIngestion() {
-        return feedIngestionService.ingestEnabledFeeds();
+        return feedIngestionOperations.ingestEnabledFeeds(IngestionTriggerType.MANUAL);
+    }
+
+    @Operation(summary = "查询 RSS 入库运行记录", description = "按开始时间倒序查询最近的 RSS 入库运行记录。")
+    @ApiResponse(
+            responseCode = "200",
+            description = "返回 RSS 入库运行记录列表",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = RssIngestionRun.class)))
+    )
+    @GetMapping("/ingestions/rss/runs")
+    public List<RssIngestionRun> listRssIngestionRuns(@RequestParam(required = false) Integer limit) {
+        return runQueryService.findRecentRuns(limit);
+    }
+
+    @Operation(summary = "查询 RSS 入库运行明细", description = "查询单次 RSS 入库运行记录及各源执行明细。")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "返回 RSS 入库运行明细",
+                    content = @Content(schema = @Schema(implementation = RssIngestionRunDetail.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "入库运行记录不存在",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            )
+    })
+    @GetMapping("/ingestions/rss/runs/{id}")
+    public RssIngestionRunDetail getRssIngestionRun(@PathVariable Long id) {
+        return runQueryService.findRunDetail(id);
     }
 
     @Operation(summary = "生成 Markdown 简报草稿", description = "按半开时间窗口查询候选文章并生成 Markdown 草稿。")
