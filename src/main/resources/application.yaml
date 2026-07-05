@@ -43,4 +43,27 @@ signal-brief:
   ingestion:
     enabled: ${SIGNAL_BRIEF_INGESTION_ENABLED:false}
     cron: "${SIGNAL_BRIEF_INGESTION_CRON:0 0 6 1,16 * *}"
-  feeds: []
+  feed-http:
+    user-agent: ${SIGNAL_BRIEF_FEED_HTTP_USER_AGENT:signal-brief/0.0.1}
+    connect-timeout: ${SIGNAL_BRIEF_FEED_HTTP_CONNECT_TIMEOUT:3s}
+    read-timeout: ${SIGNAL_BRIEF_FEED_HTTP_READ_TIMEOUT:10s}
+    retry:
+      max-attempts: ${SIGNAL_BRIEF_FEED_HTTP_RETRY_MAX_ATTEMPTS:2}
+      backoff: ${SIGNAL_BRIEF_FEED_HTTP_RETRY_BACKOFF:1s}
+  feeds:
+    - name: Spring Blog
+      url: https://spring.io/blog.atom
+      category: FRAMEWORK
+      enabled: true
+    - name: Inside Java
+      url: https://inside.java/feed.xml
+      category: JAVA
+      enabled: true
+    - name: Kubernetes Blog
+      url: https://kubernetes.io/feed.xml
+      category: FRAMEWORK
+      enabled: true
+    - name: OpenAI News
+      url: https://openai.com/news/rss.xml
+      category: AI
+      enabled: true

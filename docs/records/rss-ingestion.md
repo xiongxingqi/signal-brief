@@ -6,16 +6,18 @@
 
 RSS 入库是 SignalBrief 的第一段核心链路，目标是把外部 RSS / Atom 源转换成可供后续 AI 摘要、Markdown 简报和邮件推送使用的本地文章数据。
 
-当前已经覆盖：配置源读取、HTTP 抓取、RSS / Atom 解析、文章去重、PostgreSQL 入库、定时触发、手动触发、批次统计和简报候选查询。
+当前已经覆盖：真实配置源读取、HTTP 抓取超时、有限重试、失败分类、RSS / Atom 解析、文章去重、PostgreSQL 入库、定时触发、手动触发、批次统计和简报候选查询。
 
-当前暂不覆盖：RSS 源数据库管理、任务运行表、重试告警、AI 摘要和邮件发送。
+当前暂不覆盖：RSS 源数据库管理、任务运行表、失败告警、AI 摘要和邮件发送。
 
 ## 当前模块
 
 - `config/FeedProperties`：绑定 `signal-brief.feeds`，并提供启用源过滤。
+- `config/FeedHttpProperties`：绑定 feed 抓取客户端的 User-Agent、超时和重试配置。
+- `config/FeedHttpConfiguration`：装配 feed 专用 `RestClient`，底层使用 Apache HttpClient 5。
 - `config/IngestionProperties`：绑定 `signal-brief.ingestion` 的开关和 cron。
 - `feed/FeedClient`：定义 feed 获取边界，返回 `InputStream`。
-- `feed/HttpFeedClient`：使用 Spring `RestClient` 抓取 feed，设置 `User-Agent: signal-brief`，非 2xx 响应包装为 `FeedFetchException`。
+- `feed/HttpFeedClient`：使用 feed 专用 Spring `RestClient` 抓取 feed，非 2xx 响应和客户端 I/O 异常包装为 `FeedFetchException`。
 - `feed/RomeFeedParser`：使用 ROME 和 `XmlReader` 解析 RSS / Atom，保留 XML 自身编码识别能力。
 - `article/ArticleDeduplicationService`：按 guid、url、contentHash 顺序判断重复。
 - `article/ArticleIngestionService`：把 `FetchedArticle` 转为 `NewArticle` 并写库。
@@ -35,10 +37,37 @@ signal-brief:
   ingestion:
     enabled: ${SIGNAL_BRIEF_INGESTION_ENABLED:false}
     cron: "${SIGNAL_BRIEF_INGESTION_CRON:0 0 6 1,16 * *}"
-  feeds: []
+  feed-http:
+    user-agent: ${SIGNAL_BRIEF_FEED_HTTP_USER_AGENT:signal-brief/0.0.1}
+    connect-timeout: ${SIGNAL_BRIEF_FEED_HTTP_CONNECT_TIMEOUT:3s}
+    read-timeout: ${SIGNAL_BRIEF_FEED_HTTP_READ_TIMEOUT:10s}
+    retry:
+      max-attempts: ${SIGNAL_BRIEF_FEED_HTTP_RETRY_MAX_ATTEMPTS:2}
+      backoff: ${SIGNAL_BRIEF_FEED_HTTP_RETRY_BACKOFF:1s}
+  feeds:
+    - name: Spring Blog
+      url: https://spring.io/blog.atom
+      category: FRAMEWORK
+      enabled: true
+    - name: Inside Java
+      url: https://inside.java/feed.xml
+      category: JAVA
+      enabled: true
+    - name: Kubernetes Blog
+      url: https://kubernetes.io/feed.xml
+      category: FRAMEWORK
+      enabled: true
+    - name: OpenAI News
+      url: https://openai.com/news/rss.xml
+      category: AI
+      enabled: true
 ```
 
-RSS 源通过配置维护，第一版不入库；修改源配置后需要重启应用。每个源包含 `name`、`url`、`category`、`enabled`，其中 `category` 必须来自 `ArticleCategory`。
+RSS 源本身通过配置维护，第一版不做源表管理；修改源配置后需要重启应用。每个源包含 `name`、`url`、`category`、`enabled`，其中 `category` 必须来自 `ArticleCategory`。
+
+`signal-brief.feed-http` 控制外部 feed 抓取客户端，包含 `user-agent`、`connect-timeout`、`read-timeout` 和 `retry`。这些配置只作用于 `feedRestClient`，不影响内部 API 或后续 AI Provider HTTP 客户端。
+
+HTTP 抓取失败按类型记录：HTTP 状态失败、客户端 I/O 失败和未预期失败。仅网络异常、超时、`429` 和 `5xx` 参与有限重试；其他 `4xx`、解析失败和入库失败不在 HTTP 层重试。
 
 定时任务默认关闭，避免本地启动或测试时访问外部源。需要开启时设置：
 
@@ -91,14 +120,14 @@ CI 运行完整验证：
 ## 维护约束
 
 - 不要把 feed 内容提前解码成 `String` 再交给 XML 解析器；保持 `InputStream` 入口，让 XML 解析器处理 BOM 和 XML 声明编码。
-- HTTP 调用优先使用 Spring `RestClient`；项目已引入 `httpclient5`，底层实现由 Spring Boot 依赖管理和自动配置选择。
+- HTTP 调用优先使用 Spring `RestClient`；feed 抓取使用独立 `feedRestClient`，底层为 Apache HttpClient 5。
 - `httpclient5`、Spring 生态依赖不要在 `pom.xml` 重复声明版本，除非 Spring Boot 不管理该依赖。
 - 新增文章字段时同步更新 record、Mapper、迁移脚本和测试。
 - 调整去重规则时同步考虑应用层判断、数据库唯一索引和历史数据兼容。
-- 接入真实源后优先补充超时、重试、限流、失败告警和可观测性。
+- 新增真实源时必须优先使用官方或一手 RSS / Atom 地址，并通过官方页面或实际 HTTP 响应校验。
 
 ## 下一步
 
-- 补充真实 RSS 源清单，并区分官方源、一手源和行业源。
+- 增加失败告警和任务运行记录，沉淀源级失败原因。
 - 对摘要字段做 HTML 清理和长度控制。
 - 基于查询出口实现 AI 摘要、Markdown 简报和邮件推送。

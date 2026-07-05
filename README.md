@@ -110,6 +110,11 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 
 - `SIGNAL_BRIEF_INGESTION_ENABLED`：RSS 定时入库开关，默认 `false`。
 - `SIGNAL_BRIEF_INGESTION_CRON`：RSS 入库 cron，默认 `0 0 6 1,16 * *`。
+- `SIGNAL_BRIEF_FEED_HTTP_USER_AGENT`：RSS 抓取请求的 User-Agent，默认 `signal-brief/0.0.1`。
+- `SIGNAL_BRIEF_FEED_HTTP_CONNECT_TIMEOUT`：RSS 抓取连接超时，默认 `3s`。
+- `SIGNAL_BRIEF_FEED_HTTP_READ_TIMEOUT`：RSS 抓取读取超时，默认 `10s`。
+- `SIGNAL_BRIEF_FEED_HTTP_RETRY_MAX_ATTEMPTS`：RSS 抓取总尝试次数，默认 `2`。
+- `SIGNAL_BRIEF_FEED_HTTP_RETRY_BACKOFF`：RSS 抓取重试间隔，默认 `1s`。
 - `SIGNAL_BRIEF_INTERNAL_API_ENABLED`：内部手动触发 API 开关，默认 `false`。
 - `SIGNAL_BRIEF_OPENAPI_ENABLED`：OpenAPI / Swagger UI 文档开关，默认 `false`。
 
@@ -125,7 +130,7 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 
 ### RSS 源配置
 
-RSS 源通过 `signal-brief.feeds` 配置：
+RSS 源通过 `signal-brief.feeds` 配置。仓库默认配置包含第一批官方或一手 RSS / Atom 源：
 
 ```yaml
 signal-brief:
@@ -137,9 +142,21 @@ signal-brief:
       url: https://spring.io/blog.atom
       category: FRAMEWORK
       enabled: true
+    - name: Inside Java
+      url: https://inside.java/feed.xml
+      category: JAVA
+      enabled: true
+    - name: Kubernetes Blog
+      url: https://kubernetes.io/feed.xml
+      category: FRAMEWORK
+      enabled: true
+    - name: OpenAI News
+      url: https://openai.com/news/rss.xml
+      category: AI
+      enabled: true
 ```
 
-第一版 RSS 源不入库；修改源配置后需要重启应用。
+RSS 源默认 `enabled=true`，但定时任务默认关闭，因此普通启动不会自动访问外部站点。只有开启定时任务或调用内部手动触发接口时才会抓取真实源。修改源配置后需要重启应用。
 
 RSS 入库任务默认关闭，避免本地启动时自动访问外部源。如需开启：
 

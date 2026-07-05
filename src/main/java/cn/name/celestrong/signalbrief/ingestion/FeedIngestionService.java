@@ -4,6 +4,7 @@ import cn.name.celestrong.signalbrief.article.ArticleIngestionService;
 import cn.name.celestrong.signalbrief.config.FeedProperties;
 import cn.name.celestrong.signalbrief.feed.FetchedArticle;
 import cn.name.celestrong.signalbrief.feed.FeedClient;
+import cn.name.celestrong.signalbrief.feed.FeedFetchException;
 import cn.name.celestrong.signalbrief.feed.FeedParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +68,18 @@ public class FeedIngestionService {
                 skippedCount += result.skippedCount();
             }
             return new FeedIngestionResult(1, articles.size(), insertedCount, skippedCount, 0);
+        } catch (FeedFetchException ex) {
+            log.warn(
+                    "Failed to fetch feed source name={}, url={}, failureType={}, httpStatus={}, attempts={}/{}",
+                    source.name(),
+                    source.url(),
+                    ex.failureType(),
+                    ex.httpStatus(),
+                    ex.attemptCount(),
+                    ex.maxAttempts(),
+                    ex
+            );
+            return new FeedIngestionResult(1, 0, 0, 0, 1);
         } catch (Exception ex) {
             log.warn("Failed to ingest feed source name={}, url={}", source.name(), source.url(), ex);
             return new FeedIngestionResult(1, 0, 0, 0, 1);
