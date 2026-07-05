@@ -90,13 +90,28 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 
 核心配置文件：
 
-- `src/main/resources/application.yaml`：通用配置、profile 入口、Flyway 路径、线程池配置。
+- `src/main/resources/application.yaml`：跨环境公共配置、Flyway 路径、线程池配置和默认关闭的业务开关。
 - `src/main/resources/application-dev.yaml`：本地开发配置。
 - `src/main/resources/application-prod.yaml`：生产环境配置。
 - `src/test/resources/application-test.yaml`：测试环境配置。
 - `.env.example`：环境变量示例，不应包含真实密钥。
 
 本地私密配置放在 `.env`，不要提交真实数据库、SMTP 或 AI Provider 密钥。
+
+环境变量配置原则：
+
+- Profile 由外部环境显式指定，例如 `SPRING_PROFILES_ACTIVE=dev|test|prod`；不要在 `application.yaml` 中设置 `spring.profiles.active`。
+- `application.yaml` 只放跨环境公共配置和安全默认值，例如默认关闭的业务开关。
+- `application-dev.yaml` 可以提供匹配本地 Docker Compose 的便利默认值；`application-prod.yaml` 和 `application-test.yaml` 对 datasource、端口等基础设施配置保持必填，占位符不写默认值。
+- 新增环境变量时同步更新 `.env.example` 和本文档；敏感值只写变量名，不写真实密钥。
+- 手动触发、OpenAPI、定时任务等可能产生副作用或暴露接口的开关默认关闭，需要运行时显式开启。
+
+常用环境变量：
+
+- `SIGNAL_BRIEF_INGESTION_ENABLED`：RSS 定时入库开关，默认 `false`。
+- `SIGNAL_BRIEF_INGESTION_CRON`：RSS 入库 cron，默认 `0 0 6 1,16 * *`。
+- `SIGNAL_BRIEF_INTERNAL_API_ENABLED`：内部手动触发 API 开关，默认 `false`。
+- `SIGNAL_BRIEF_OPENAPI_ENABLED`：OpenAPI / Swagger UI 文档开关，默认 `false`。
 
 ## 测试策略
 
@@ -133,6 +148,46 @@ SPRING_PROFILES_ACTIVE=dev SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boo
 ```
 
 默认 cron 为 `0 0 6 1,16 * *`，表示每月 1 日和 16 日 06:00 执行。可通过 `SIGNAL_BRIEF_INGESTION_CRON` 覆盖。
+
+### 内部手动触发 API
+
+内部 API 和 OpenAPI 文档默认关闭。如需本地调试或手动补偿执行，启动时显式开启：
+
+```bash
+SPRING_PROFILES_ACTIVE=dev \
+SIGNAL_BRIEF_INTERNAL_API_ENABLED=true \
+SIGNAL_BRIEF_OPENAPI_ENABLED=true \
+./mvnw spring-boot:run
+```
+
+Swagger UI 地址：
+
+```text
+http://localhost:8080/internal/swagger-ui.html
+```
+
+Internal 分组 OpenAPI JSON 地址：
+
+```text
+http://localhost:8080/internal/api-docs/internal
+```
+
+触发一次 RSS 入库：
+
+```bash
+curl -X POST http://localhost:8080/internal/ingestions/rss
+```
+
+生成指定窗口的 Markdown 简报草稿：
+
+```bash
+curl -X POST http://localhost:8080/internal/briefs/markdown \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "startInclusive": "2026-07-01T00:00:00Z",
+    "endExclusive": "2026-07-16T00:00:00Z"
+  }'
+```
 
 ## 项目结构
 

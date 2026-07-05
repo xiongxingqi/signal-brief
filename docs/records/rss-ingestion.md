@@ -6,9 +6,9 @@
 
 RSS 入库是 SignalBrief 的第一段核心链路，目标是把外部 RSS / Atom 源转换成可供后续 AI 摘要、Markdown 简报和邮件推送使用的本地文章数据。
 
-当前已经覆盖：配置源读取、HTTP 抓取、RSS / Atom 解析、文章去重、PostgreSQL 入库、定时触发、批次统计和简报候选查询。
+当前已经覆盖：配置源读取、HTTP 抓取、RSS / Atom 解析、文章去重、PostgreSQL 入库、定时触发、手动触发、批次统计和简报候选查询。
 
-当前暂不覆盖：RSS 源数据库管理、手动触发接口、任务运行表、重试告警、AI 摘要、Markdown 生成和邮件发送。
+当前暂不覆盖：RSS 源数据库管理、任务运行表、重试告警、AI 摘要和邮件发送。
 
 ## 当前模块
 
@@ -23,6 +23,8 @@ RSS 入库是 SignalBrief 的第一段核心链路，目标是把外部 RSS / At
 - `article/ArticleQueryService`：提供后续简报候选文章查询。
 - `ingestion/FeedIngestionService`：编排多源入库，单源失败隔离。
 - `ingestion/FeedIngestionScheduler`：在配置开启后按 cron 触发入库。
+- `internal/ManualTriggerController`：在内部 API 开启后，提供 RSS 入库手动触发入口。
+- `internal/OpenApiConfiguration`：在 OpenAPI 开启后提供 internal 分组和接口元信息。
 
 ## 配置
 
@@ -45,6 +47,10 @@ SPRING_PROFILES_ACTIVE=dev SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boo
 ```
 
 默认 cron 表示每月 1 日和 16 日 06:00 执行。
+
+手动触发入口位于 `POST /internal/ingestions/rss`，由 `signal-brief.internal-api.enabled` 控制是否注册。该入口不受 `signal-brief.ingestion.enabled` 影响，后者只控制定时任务是否注册。
+
+OpenAPI 文档由 `SIGNAL_BRIEF_OPENAPI_ENABLED` 控制，默认关闭；本地开启后可访问 `/internal/api-docs/internal` 和 `/internal/swagger-ui.html`。当前文档通过 internal 分组匹配 `/internal/**`，后续对外 API 应新增 public 分组，不要使用全局扫描配置互相影响。
 
 ## 数据与去重
 
@@ -80,7 +86,7 @@ CI 运行完整验证：
 ./mvnw -B verify
 ```
 
-当前测试覆盖配置绑定、RSS / Atom fixture 解析、HTTP 抓取异常、去重、入库编排、定时开关、查询窗口和 MyBatis 数据库行为。数据库集成测试依赖 CI 中独立 PostgreSQL service。
+当前测试覆盖配置绑定、RSS / Atom fixture 解析、HTTP 抓取异常、去重、入库编排、定时开关、手动触发接口、查询窗口和 MyBatis 数据库行为。数据库集成测试依赖 CI 中独立 PostgreSQL service。
 
 ## 维护约束
 
@@ -94,6 +100,5 @@ CI 运行完整验证：
 ## 下一步
 
 - 补充真实 RSS 源清单，并区分官方源、一手源和行业源。
-- 设计手动触发入口，便于本地调试和运维补偿。
 - 对摘要字段做 HTML 清理和长度控制。
 - 基于查询出口实现 AI 摘要、Markdown 简报和邮件推送。

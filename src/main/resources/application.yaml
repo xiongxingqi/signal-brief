@@ -1,8 +1,6 @@
 spring:
   application:
     name: signal-brief
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE}
   flyway:
     callback-locations: classpath:db/callback
     locations: classpath:db/migration
@@ -24,7 +22,21 @@ spring:
         await-termination: true
         await-termination-period: 30s
 
+springdoc:
+  api-docs:
+    enabled: ${SIGNAL_BRIEF_OPENAPI_ENABLED:false}
+    path: /internal/api-docs
+  swagger-ui:
+    enabled: ${SIGNAL_BRIEF_OPENAPI_ENABLED:false}
+    path: /internal/swagger-ui.html
+    urls:
+      - name: internal
+        url: /internal/api-docs/internal
+    urls-primary-name: internal
+
 signal-brief:
+  internal-api:
+    enabled: ${SIGNAL_BRIEF_INTERNAL_API_ENABLED:false}
   ingestion:
     enabled: ${SIGNAL_BRIEF_INGESTION_ENABLED:false}
     cron: "${SIGNAL_BRIEF_INGESTION_CRON:0 0 6 1,16 * *}"
