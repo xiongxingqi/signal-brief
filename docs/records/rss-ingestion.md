@@ -1,14 +1,14 @@
 # RSS 抓取入库记录
 
-> 本文档记录 RSS 抓取、解析、去重、入库和查询出口的当前设计。源清单与 HTTP 抓取可靠性细节见 [RSS 源清单与抓取可靠性记录](rss-source-reliability.md)。实现细节以源码、迁移脚本和测试为准。
+> 本文档记录 RSS 抓取、解析、去重、入库和查询出口的当前设计。源清单与 HTTP 抓取可靠性细节见 [RSS 源清单与抓取可靠性记录](rss-source-reliability.md)，运行记录细节见 [RSS 入库运行记录](rss-ingestion-run-record.md)。实现细节以源码、迁移脚本和测试为准。
 
 ## 定位
 
 RSS 入库是 SignalBrief 的第一段核心链路，目标是把外部 RSS / Atom 源转换成可供后续 AI 摘要、Markdown 简报和邮件推送使用的本地文章数据。
 
-当前已经覆盖：真实配置源读取、HTTP 抓取超时、有限重试、失败分类、RSS / Atom 解析、文章去重、PostgreSQL 入库、定时触发、手动触发、批次统计和简报候选查询。
+当前已经覆盖：真实配置源读取、HTTP 抓取超时、有限重试、失败分类、RSS / Atom 解析、文章去重、PostgreSQL 入库、定时触发、手动触发、批次统计、RSS 入库运行与源级明细记录、简报候选查询。
 
-当前暂不覆盖：RSS 源数据库管理、任务运行表、失败告警、AI 摘要和邮件发送。
+当前暂不覆盖：RSS 源数据库管理、失败告警、AI 摘要和邮件发送。
 
 ## 当前模块
 
@@ -24,8 +24,10 @@ RSS 入库是 SignalBrief 的第一段核心链路，目标是把外部 RSS / At
 - `article/ArticleMapper`：负责文章写入和去重查询。
 - `article/ArticleQueryService`：提供后续简报候选文章查询。
 - `ingestion/FeedIngestionService`：编排多源入库，单源失败隔离。
+- `ingestion/IngestionRunRecorder`：持久化 RSS 入库运行记录和源级执行明细。
+- `ingestion/RssIngestionRunQueryService`：查询最近运行记录和单次运行明细。
 - `ingestion/FeedIngestionScheduler`：在配置开启后按 cron 触发入库。
-- `internal/ManualTriggerController`：在内部 API 开启后，提供 RSS 入库手动触发入口。
+- `internal/ManualTriggerController`：在内部 API 开启后，提供 RSS 入库手动触发和运行记录查询入口。
 - `internal/OpenApiConfiguration`：在 OpenAPI 开启后提供 internal 分组和接口元信息。
 
 ## 配置
@@ -77,13 +79,20 @@ SPRING_PROFILES_ACTIVE=dev SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boo
 
 默认 cron 表示每月 1 日和 16 日 06:00 执行。
 
-手动触发入口位于 `POST /internal/ingestions/rss`，由 `signal-brief.internal-api.enabled` 控制是否注册。该入口不受 `signal-brief.ingestion.enabled` 影响，后者只控制定时任务是否注册。
+手动触发入口位于 `POST /internal/ingestions/rss`，由 `signal-brief.internal-api.enabled` 控制是否注册。响应沿用 `FeedIngestionResult`，并包含本次运行的 `runId`。该入口不受 `signal-brief.ingestion.enabled` 影响，后者只控制定时任务是否注册。
+
+运行记录查询入口同样由内部 API 开关控制：
+
+- `GET /internal/ingestions/rss/runs`：按开始时间倒序查询最近的 RSS 入库运行记录。
+- `GET /internal/ingestions/rss/runs/{id}`：查询单次 RSS 入库运行及各源执行明细。
 
 OpenAPI 文档由 `SIGNAL_BRIEF_OPENAPI_ENABLED` 控制，默认关闭；本地开启后可访问 `/internal/api-docs/internal` 和 `/internal/swagger-ui.html`。当前文档通过 internal 分组匹配 `/internal/**`，后续对外 API 应新增 public 分组，不要使用全局扫描配置互相影响。
 
 ## 数据与去重
 
 文章表由 `src/main/resources/db/migration/V1__create_article_table.sql` 创建，核心字段包括来源、分类、标题、文章 URL、guid、发布时间、摘要、内容哈希和创建更新时间。
+
+RSS 入库运行记录由 `rss_ingestion_run` 和 `rss_ingestion_source_run` 保存。运行级记录包含触发方式、状态、开始结束时间、耗时、源数量和抓取/入库/跳过/失败统计；源级记录包含源名称、URL、分类、状态、抓取/入库/跳过统计和失败诊断字段。源级失败明细包含失败类型、HTTP 状态、尝试次数、最大尝试次数和错误摘要（`error_message`）。
 
 应用层去重顺序：
 
@@ -115,7 +124,7 @@ CI 运行完整验证：
 ./mvnw -B verify
 ```
 
-当前测试覆盖配置绑定、RSS / Atom fixture 解析、HTTP 抓取异常、去重、入库编排、定时开关、手动触发接口、查询窗口和 MyBatis 数据库行为。数据库集成测试依赖 CI 中独立 PostgreSQL service。
+当前测试覆盖配置绑定、RSS / Atom fixture 解析、HTTP 抓取异常、去重、入库编排、运行记录持久化与查询、定时开关、手动触发接口、查询窗口和 MyBatis 数据库行为。数据库集成测试依赖 CI 中独立 PostgreSQL service。
 
 ## 维护约束
 
@@ -128,6 +137,6 @@ CI 运行完整验证：
 
 ## 下一步
 
-- 增加失败告警和任务运行记录，沉淀源级失败原因。
+- 增加连续失败告警和运行记录保留清理策略。
 - 对摘要字段做 HTML 清理和长度控制。
 - 基于查询出口实现 AI 摘要、Markdown 简报和邮件推送。

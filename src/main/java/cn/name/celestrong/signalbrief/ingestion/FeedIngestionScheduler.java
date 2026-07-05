@@ -17,10 +17,10 @@ public class FeedIngestionScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(FeedIngestionScheduler.class);
 
-    private final FeedIngestionService feedIngestionService;
+    private final FeedIngestionOperations feedIngestionOperations;
 
-    public FeedIngestionScheduler(FeedIngestionService feedIngestionService) {
-        this.feedIngestionService = feedIngestionService;
+    public FeedIngestionScheduler(FeedIngestionOperations feedIngestionOperations) {
+        this.feedIngestionOperations = feedIngestionOperations;
     }
 
     /**
@@ -28,9 +28,10 @@ public class FeedIngestionScheduler {
      */
     @Scheduled(cron = "${signal-brief.ingestion.cron}")
     public void ingestEnabledFeeds() {
-        FeedIngestionResult result = feedIngestionService.ingestEnabledFeeds();
+        FeedIngestionResult result = feedIngestionOperations.ingestEnabledFeeds(IngestionTriggerType.SCHEDULED);
         log.info(
-                "Scheduled feed ingestion finished: sources={}, fetched={}, inserted={}, skipped={}, failedSources={}",
+                "Scheduled feed ingestion finished: runId={}, sources={}, fetched={}, inserted={}, skipped={}, failedSources={}",
+                result.runId(),
                 result.sourceCount(),
                 result.fetchedCount(),
                 result.insertedCount(),

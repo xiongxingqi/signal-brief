@@ -1,5 +1,7 @@
 package cn.name.celestrong.signalbrief.internal;
 
+import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunNotFoundException;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,16 @@ public class ManualTriggerExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<InternalApiErrorResponse> handleUnreadableRequest() {
         return ResponseEntity.badRequest().body(new InternalApiErrorResponse("请求体格式不正确"));
+    }
+
+    @ExceptionHandler(TypeMismatchException.class)
+    public ResponseEntity<InternalApiErrorResponse> handleTypeMismatch() {
+        return ResponseEntity.badRequest().body(new InternalApiErrorResponse("请求参数格式不正确"));
+    }
+
+    @ExceptionHandler(RssIngestionRunNotFoundException.class)
+    public ResponseEntity<InternalApiErrorResponse> handleRunNotFound(RssIngestionRunNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new InternalApiErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

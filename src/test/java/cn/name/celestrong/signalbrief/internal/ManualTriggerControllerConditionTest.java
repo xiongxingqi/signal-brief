@@ -1,7 +1,9 @@
 package cn.name.celestrong.signalbrief.internal;
 
 import cn.name.celestrong.signalbrief.brief.BriefGenerationService;
-import cn.name.celestrong.signalbrief.ingestion.FeedIngestionService;
+import cn.name.celestrong.signalbrief.ingestion.FeedIngestionOperations;
+import cn.name.celestrong.signalbrief.ingestion.FeedIngestionResult;
+import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunQueryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -38,13 +40,18 @@ class ManualTriggerControllerConditionTest {
     static class TestConfiguration {
 
         @Bean
-        FeedIngestionService feedIngestionService() {
-            return new FeedIngestionService(null, null, null, null);
+        FeedIngestionOperations feedIngestionOperations() {
+            return triggerType -> FeedIngestionResult.empty();
         }
 
         @Bean
         BriefGenerationService briefGenerationService() {
             return new BriefGenerationService(null, null);
+        }
+
+        @Bean
+        RssIngestionRunQueryService rssIngestionRunQueryService() {
+            return new RssIngestionRunQueryService(null);
         }
     }
 }
