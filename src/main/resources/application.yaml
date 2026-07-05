@@ -21,6 +21,9 @@ spring:
       shutdown:
         await-termination: true
         await-termination-period: 30s
+  docker:
+    compose:
+      enabled: ${SPRING_DOCKER_COMPOSE_ENABLED:false}
 
 springdoc:
   api-docs:
