@@ -5,6 +5,7 @@ import cn.name.celestrong.signalbrief.brief.AiBriefGenerationService;
 import cn.name.celestrong.signalbrief.brief.BriefArchiveService;
 import cn.name.celestrong.signalbrief.brief.BriefGeneration;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationMapper;
+import cn.name.celestrong.signalbrief.brief.BriefGenerationQueryService;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationService;
 import cn.name.celestrong.signalbrief.config.BriefMailProperties;
 import cn.name.celestrong.signalbrief.config.AiSummaryProperties;
@@ -13,6 +14,7 @@ import cn.name.celestrong.signalbrief.ingestion.FeedIngestionResult;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunQueryService;
 import cn.name.celestrong.signalbrief.mail.BriefMailDelivery;
 import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryMapper;
+import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryQueryService;
 import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryService;
 import cn.name.celestrong.signalbrief.mail.BriefMailSender;
 import org.junit.jupiter.api.Test;
@@ -80,6 +82,11 @@ class ManualTriggerControllerConditionTest {
         }
 
         @Bean
+        BriefGenerationQueryService briefGenerationQueryService() {
+            return new BriefGenerationQueryService(failingBriefGenerationMapper());
+        }
+
+        @Bean
         BriefMailDeliveryService briefMailDeliveryService() {
             return new BriefMailDeliveryService(
                     new BriefMailProperties(false, null, List.of(), null),
@@ -87,6 +94,11 @@ class ManualTriggerControllerConditionTest {
                     failingBriefGenerationMapper(),
                     failingBriefMailDeliveryMapper()
             );
+        }
+
+        @Bean
+        BriefMailDeliveryQueryService briefMailDeliveryQueryService() {
+            return new BriefMailDeliveryQueryService(failingBriefGenerationMapper(), failingBriefMailDeliveryMapper());
         }
 
         @Bean
@@ -122,6 +134,11 @@ class ManualTriggerControllerConditionTest {
 
                 @Override
                 public Optional<BriefGeneration> findById(Long id) {
+                    throw new AssertionError("条件测试不会查询简报归档");
+                }
+
+                @Override
+                public List<BriefGeneration> findRecent(int limit) {
                     throw new AssertionError("条件测试不会查询简报归档");
                 }
             };

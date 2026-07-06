@@ -4,6 +4,7 @@ import cn.name.celestrong.signalbrief.brief.AiBriefGenerationResult;
 import cn.name.celestrong.signalbrief.brief.AiBriefGenerationService;
 import cn.name.celestrong.signalbrief.brief.BriefArchiveService;
 import cn.name.celestrong.signalbrief.brief.BriefGeneration;
+import cn.name.celestrong.signalbrief.brief.BriefGenerationQueryService;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationService;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionOperations;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionResult;
@@ -12,6 +13,7 @@ import cn.name.celestrong.signalbrief.ingestion.RssIngestionRun;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunDetail;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunQueryService;
 import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryResult;
+import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryQueryService;
 import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -46,7 +48,9 @@ public class ManualTriggerController {
     private final BriefGenerationService briefGenerationService;
     private final AiBriefGenerationService aiBriefGenerationService;
     private final BriefArchiveService briefArchiveService;
+    private final BriefGenerationQueryService briefGenerationQueryService;
     private final BriefMailDeliveryService briefMailDeliveryService;
+    private final BriefMailDeliveryQueryService briefMailDeliveryQueryService;
     private final RssIngestionRunQueryService runQueryService;
 
     public ManualTriggerController(
@@ -54,14 +58,18 @@ public class ManualTriggerController {
             BriefGenerationService briefGenerationService,
             AiBriefGenerationService aiBriefGenerationService,
             BriefArchiveService briefArchiveService,
+            BriefGenerationQueryService briefGenerationQueryService,
             BriefMailDeliveryService briefMailDeliveryService,
+            BriefMailDeliveryQueryService briefMailDeliveryQueryService,
             RssIngestionRunQueryService runQueryService
     ) {
         this.feedIngestionOperations = feedIngestionOperations;
         this.briefGenerationService = briefGenerationService;
         this.aiBriefGenerationService = aiBriefGenerationService;
         this.briefArchiveService = briefArchiveService;
+        this.briefGenerationQueryService = briefGenerationQueryService;
         this.briefMailDeliveryService = briefMailDeliveryService;
+        this.briefMailDeliveryQueryService = briefMailDeliveryQueryService;
         this.runQueryService = runQueryService;
     }
 
@@ -200,6 +208,35 @@ public class ManualTriggerController {
         return briefArchiveService.archiveAiSummary(request.startInclusive(), request.endExclusive());
     }
 
+    @Operation(summary = "查询简报归档列表", description = "按最新记录倒序查询最近的 AI 简报归档。")
+    @ApiResponse(
+            responseCode = "200",
+            description = "返回简报归档列表",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = BriefGeneration.class)))
+    )
+    @GetMapping("/briefs/archives")
+    public List<BriefGeneration> listBriefArchives(@RequestParam(required = false) Integer limit) {
+        return briefGenerationQueryService.findRecentArchives(limit);
+    }
+
+    @Operation(summary = "查询简报归档详情", description = "按归档 ID 查询 AI 简报生成记录。")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "返回简报归档详情",
+                    content = @Content(schema = @Schema(implementation = BriefGeneration.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "简报归档记录不存在",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            )
+    })
+    @GetMapping("/briefs/archives/{id}")
+    public BriefGeneration getBriefArchive(@PathVariable Long id) {
+        return briefGenerationQueryService.findArchive(id);
+    }
+
     @Operation(summary = "发送简报归档邮件", description = "将已成功生成的简报归档发送到配置的收件人列表。")
     @ApiResponses({
             @ApiResponse(
@@ -227,6 +264,24 @@ public class ManualTriggerController {
     public BriefMailDeliveryResponse deliverArchivedBriefMail(@PathVariable Long id) {
         BriefMailDeliveryResult result = briefMailDeliveryService.deliver(id);
         return new BriefMailDeliveryResponse(result.briefGenerationId(), result.deliveries());
+    }
+
+    @Operation(summary = "查询简报邮件发送记录", description = "按归档 ID 查询已创建的邮件发送记录。")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "返回邮件发送记录",
+                    content = @Content(schema = @Schema(implementation = BriefMailDeliveryResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "简报归档记录不存在",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            )
+    })
+    @GetMapping("/briefs/archives/{id}/mail-deliveries")
+    public BriefMailDeliveryResponse listArchivedBriefMailDeliveries(@PathVariable Long id) {
+        return new BriefMailDeliveryResponse(id, briefMailDeliveryQueryService.findDeliveries(id));
     }
 
     private void validateBriefWindowRequest(MarkdownBriefRequest request) {

@@ -12,6 +12,7 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -84,6 +85,23 @@ class BriefGenerationMapperIT {
         assertEquals("provider down", archive.errorSummary());
         assertEquals(completedAt, archive.completedAt());
         assertNull(archive.summaryMarkdown());
+    }
+
+    @Test
+    void findsRecentArchivesInDescendingIdOrderWithLimit() {
+        Instant start = Instant.parse("2026-07-01T00:00:00Z");
+        Instant end = Instant.parse("2026-07-16T00:00:00Z");
+
+        Long first = mapper.insertGenerating(start, end, "# first\n");
+        Long second = mapper.insertGenerating(start.plusSeconds(60), end.plusSeconds(60), "# second\n");
+        Long third = mapper.insertGenerating(start.plusSeconds(120), end.plusSeconds(120), "# third\n");
+
+        List<BriefGeneration> archives = mapper.findRecent(2);
+
+        assertEquals(List.of(third, second), archives.stream().map(BriefGeneration::id).toList());
+        assertEquals("# third\n", archives.getFirst().draftMarkdown());
+        assertEquals(BriefGenerationStatus.GENERATING, archives.getFirst().status());
+        assertNotEquals(first, archives.getFirst().id());
     }
 
     @Test

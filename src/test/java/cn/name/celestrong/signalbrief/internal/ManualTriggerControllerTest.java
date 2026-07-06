@@ -11,6 +11,7 @@ import cn.name.celestrong.signalbrief.brief.AiBriefGenerationService;
 import cn.name.celestrong.signalbrief.brief.BriefArchiveGenerationException;
 import cn.name.celestrong.signalbrief.brief.BriefArchiveService;
 import cn.name.celestrong.signalbrief.brief.BriefGeneration;
+import cn.name.celestrong.signalbrief.brief.BriefGenerationQueryService;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationMapper;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationNotFoundException;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationNotReadyException;
@@ -31,6 +32,7 @@ import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunQueryService;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionSourceRun;
 import cn.name.celestrong.signalbrief.mail.BriefMailDelivery;
 import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryMapper;
+import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryQueryService;
 import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryResult;
 import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryService;
 import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryStatus;
@@ -87,7 +89,13 @@ class ManualTriggerControllerTest {
     private RecordingBriefArchiveService briefArchiveService;
 
     @Autowired
+    private RecordingBriefGenerationQueryService briefGenerationQueryService;
+
+    @Autowired
     private RecordingBriefMailDeliveryService briefMailDeliveryService;
+
+    @Autowired
+    private RecordingBriefMailDeliveryQueryService briefMailDeliveryQueryService;
 
     @BeforeEach
     void resetRecordingServices() {
@@ -96,7 +104,9 @@ class ManualTriggerControllerTest {
         aiBriefGenerationService.reset();
         runQueryService.reset();
         briefArchiveService.reset();
+        briefGenerationQueryService.reset();
         briefMailDeliveryService.reset();
+        briefMailDeliveryQueryService.reset();
     }
 
     @Test
@@ -285,6 +295,34 @@ class ManualTriggerControllerTest {
     }
 
     @Test
+    void listsBriefArchives() throws Exception {
+        mockMvc.perform(get("/internal/briefs/archives").param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(100))
+                .andExpect(jsonPath("$[0].status").value("SUCCESS"))
+                .andExpect(jsonPath("$[0].summaryMarkdown").value("## AI 摘要\n"));
+
+        assertEquals(5, briefGenerationQueryService.limit);
+    }
+
+    @Test
+    void getsBriefArchive() throws Exception {
+        mockMvc.perform(get("/internal/briefs/archives/100"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(100))
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
+
+        assertEquals(100L, briefGenerationQueryService.briefGenerationId);
+    }
+
+    @Test
+    void mapsMissingBriefArchiveToNotFoundWhenGettingArchive() throws Exception {
+        mockMvc.perform(get("/internal/briefs/archives/404"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("简报归档记录不存在: 404"));
+    }
+
+    @Test
     void deliversArchivedBriefMail() throws Exception {
         mockMvc.perform(post("/internal/briefs/100/mail-deliveries"))
                 .andExpect(status().isOk())
@@ -325,6 +363,25 @@ class ManualTriggerControllerTest {
         mockMvc.perform(post("/internal/briefs/100/mail-deliveries"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.message").value("邮件发送能力未启用"));
+    }
+
+    @Test
+    void listsArchivedBriefMailDeliveries() throws Exception {
+        mockMvc.perform(get("/internal/briefs/archives/100/mail-deliveries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.briefGenerationId").value(100))
+                .andExpect(jsonPath("$.deliveries[0].id").value(200))
+                .andExpect(jsonPath("$.deliveries[0].recipient").value("reader@example.com"))
+                .andExpect(jsonPath("$.deliveries[0].status").value("SENT"));
+
+        assertEquals(100L, briefMailDeliveryQueryService.briefGenerationId);
+    }
+
+    @Test
+    void mapsMissingBriefArchiveToNotFoundWhenListingMailDeliveries() throws Exception {
+        mockMvc.perform(get("/internal/briefs/archives/404/mail-deliveries"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("简报归档记录不存在: 404"));
     }
 
     @Test
@@ -427,8 +484,18 @@ class ManualTriggerControllerTest {
         }
 
         @Bean
+        RecordingBriefGenerationQueryService briefGenerationQueryService() {
+            return new RecordingBriefGenerationQueryService();
+        }
+
+        @Bean
         RecordingBriefMailDeliveryService briefMailDeliveryService() {
             return new RecordingBriefMailDeliveryService();
+        }
+
+        @Bean
+        RecordingBriefMailDeliveryQueryService briefMailDeliveryQueryService() {
+            return new RecordingBriefMailDeliveryQueryService();
         }
     }
 
@@ -693,7 +760,58 @@ class ManualTriggerControllerTest {
                 public Optional<BriefGeneration> findById(Long id) {
                     throw new AssertionError("测试 fake 会覆盖 archiveAiSummary，不应查询归档记录");
                 }
+
+                @Override
+                public List<BriefGeneration> findRecent(int limit) {
+                    throw new AssertionError("测试 fake 会覆盖 archiveAiSummary，不应查询归档记录");
+                }
             };
+        }
+    }
+
+    static class RecordingBriefGenerationQueryService extends BriefGenerationQueryService {
+
+        private Integer limit;
+        private Long briefGenerationId;
+
+        RecordingBriefGenerationQueryService() {
+            super(null);
+        }
+
+        @Override
+        public List<BriefGeneration> findRecentArchives(Integer limit) {
+            this.limit = limit;
+            return List.of(archive(100L));
+        }
+
+        @Override
+        public BriefGeneration findArchive(Long id) {
+            briefGenerationId = id;
+            if (id.equals(404L)) {
+                throw new BriefGenerationNotFoundException("简报归档记录不存在: " + id);
+            }
+            return archive(id);
+        }
+
+        private void reset() {
+            limit = null;
+            briefGenerationId = null;
+        }
+
+        private BriefGeneration archive(Long id) {
+            Instant now = Instant.parse("2026-07-16T01:00:00Z");
+            return new BriefGeneration(
+                    id,
+                    Instant.parse("2026-07-01T00:00:00Z"),
+                    Instant.parse("2026-07-16T00:00:00Z"),
+                    BriefGenerationStatus.SUCCESS,
+                    "# SignalBrief 技术半月报\n",
+                    "## AI 摘要\n",
+                    null,
+                    now,
+                    now,
+                    now
+            );
         }
     }
 
@@ -767,6 +885,39 @@ class ManualTriggerControllerTest {
                     throw new AssertionError("测试 fake 会覆盖 deliver，不应查询邮件记录");
                 }
             };
+        }
+    }
+
+    static class RecordingBriefMailDeliveryQueryService extends BriefMailDeliveryQueryService {
+
+        private Long briefGenerationId;
+
+        RecordingBriefMailDeliveryQueryService() {
+            super(null, null);
+        }
+
+        @Override
+        public List<BriefMailDelivery> findDeliveries(Long briefGenerationId) {
+            this.briefGenerationId = briefGenerationId;
+            if (briefGenerationId.equals(404L)) {
+                throw new BriefGenerationNotFoundException("简报归档记录不存在: " + briefGenerationId);
+            }
+            Instant now = Instant.parse("2026-07-16T02:00:00Z");
+            return List.of(new BriefMailDelivery(
+                    200L,
+                    briefGenerationId,
+                    "reader@example.com",
+                    BriefMailDeliveryStatus.SENT,
+                    "SignalBrief 技术半月报 2026-07-01 至 2026-07-16",
+                    null,
+                    now,
+                    now,
+                    now
+            ));
+        }
+
+        private void reset() {
+            briefGenerationId = null;
         }
     }
 

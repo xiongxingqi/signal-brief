@@ -543,6 +543,11 @@ class BriefMailDeliveryServiceTest {
             findByIdCalls++;
             return archive.filter(value -> value.id().equals(id));
         }
+
+        @Override
+        public List<BriefGeneration> findRecent(int limit) {
+            throw new UnsupportedOperationException("服务测试不应查询归档列表");
+        }
     }
 
     private static class RecordingBriefMailDeliveryMapper implements BriefMailDeliveryMapper {

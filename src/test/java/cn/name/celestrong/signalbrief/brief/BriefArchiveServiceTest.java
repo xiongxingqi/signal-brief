@@ -388,5 +388,10 @@ class BriefArchiveServiceTest {
                     completedAt
             ));
         }
+
+        @Override
+        public List<BriefGeneration> findRecent(int limit) {
+            throw new UnsupportedOperationException("服务测试不应查询归档列表");
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 SignalBrief 是一个面向 Java 后端开发者的个人资讯聚合与 AI 摘要工具。项目目标是从官方源和一手源中抓取技术与行业资讯，完成去重、分类、摘要生成、邮件推送和归档，最终输出结构清晰、来源可追溯的中文技术半月报。
 
-> 当前仓库已完成 Spring Boot 工程骨架、RSS 抓取入库、定时采集、候选文章查询、Markdown 简报草稿生成、基于 OpenAI-compatible Chat Completions 的 AI 摘要手动生成，以及手动归档和手动邮件发送基础；定时自动发送、HTML 邮件和重试队列仍未实现。
+> 当前仓库已完成 Spring Boot 工程骨架、RSS 抓取入库、定时采集、候选文章查询、Markdown 简报草稿生成、基于 OpenAI-compatible Chat Completions 的 AI 摘要手动生成、手动归档、手动邮件发送，以及归档和邮件发送记录查询基础；定时自动发送、HTML 邮件和重试队列仍未实现。
 
 ## 目标流程
 
@@ -258,6 +258,14 @@ curl -X POST http://localhost:8080/internal/briefs/ai-summary/archives \
 curl -X POST http://localhost:8080/internal/briefs/100/mail-deliveries
 ```
 
+查询简报归档和邮件发送记录：
+
+```bash
+curl 'http://localhost:8080/internal/briefs/archives?limit=20'
+curl http://localhost:8080/internal/briefs/archives/100
+curl http://localhost:8080/internal/briefs/archives/100/mail-deliveries
+```
+
 ## 项目结构
 
 ```text
@@ -282,6 +290,7 @@ curl -X POST http://localhost:8080/internal/briefs/100/mail-deliveries
 - [AI 摘要生成记录](docs/records/ai-summary-generation.md)
 - [简报归档与邮件发送基础记录](docs/records/brief-archive-mail-delivery.md)
 - [内部手动触发 API 记录](docs/records/manual-trigger-api.md)
+- [事务边界与状态机实践](docs/transaction-boundaries-and-state-machines.md)
 - [Git 提交规范](docs/git-commit-convention.md)
 - [贡献者指南](AGENTS.md)
 
