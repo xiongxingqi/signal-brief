@@ -1,6 +1,9 @@
 package cn.name.celestrong.signalbrief.internal;
 
+import cn.name.celestrong.signalbrief.ai.AiSummaryService;
+import cn.name.celestrong.signalbrief.brief.AiBriefGenerationService;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationService;
+import cn.name.celestrong.signalbrief.config.AiSummaryProperties;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionOperations;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionResult;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunQueryService;
@@ -47,6 +50,19 @@ class ManualTriggerControllerConditionTest {
         @Bean
         BriefGenerationService briefGenerationService() {
             return new BriefGenerationService(null, null);
+        }
+
+        @Bean
+        AiBriefGenerationService aiBriefGenerationService(BriefGenerationService briefGenerationService) {
+            return new AiBriefGenerationService(
+                    briefGenerationService,
+                    new AiSummaryService(
+                            new AiSummaryProperties(false, null, null, null, null, null, null, null),
+                            (systemPrompt, userContent) -> {
+                                throw new AssertionError("条件测试不会生成 AI 摘要");
+                            }
+                    )
+            );
         }
 
         @Bean

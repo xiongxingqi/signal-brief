@@ -1,5 +1,7 @@
 package cn.name.celestrong.signalbrief.internal;
 
+import cn.name.celestrong.signalbrief.ai.AiSummaryException;
+import cn.name.celestrong.signalbrief.ai.AiSummaryUnavailableException;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunNotFoundException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -34,6 +36,18 @@ public class ManualTriggerExceptionHandler {
     @ExceptionHandler(RssIngestionRunNotFoundException.class)
     public ResponseEntity<InternalApiErrorResponse> handleRunNotFound(RssIngestionRunNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new InternalApiErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AiSummaryUnavailableException.class)
+    public ResponseEntity<InternalApiErrorResponse> handleAiSummaryUnavailable(AiSummaryUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new InternalApiErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AiSummaryException.class)
+    public ResponseEntity<InternalApiErrorResponse> handleAiSummaryException() {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new InternalApiErrorResponse("AI 摘要生成失败"));
     }
 
     @ExceptionHandler(Exception.class)

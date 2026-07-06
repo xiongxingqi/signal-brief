@@ -1,5 +1,7 @@
 package cn.name.celestrong.signalbrief.internal;
 
+import cn.name.celestrong.signalbrief.brief.AiBriefGenerationResult;
+import cn.name.celestrong.signalbrief.brief.AiBriefGenerationService;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationService;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionOperations;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionResult;
@@ -30,7 +32,7 @@ import java.util.List;
  *
  * <p>该入口只做 HTTP 协议适配，具体入库和简报生成逻辑继续委托应用服务。</p>
  */
-@Tag(name = "内部手动触发", description = "RSS 入库和 Markdown 简报草稿的手动触发接口")
+@Tag(name = "内部手动触发", description = "RSS 入库、Markdown 简报草稿和 AI 摘要的手动触发接口")
 @RestController
 @RequestMapping("/internal")
 @ConditionalOnProperty(prefix = "signal-brief.internal-api", name = "enabled", havingValue = "true")
@@ -38,15 +40,18 @@ public class ManualTriggerController {
 
     private final FeedIngestionOperations feedIngestionOperations;
     private final BriefGenerationService briefGenerationService;
+    private final AiBriefGenerationService aiBriefGenerationService;
     private final RssIngestionRunQueryService runQueryService;
 
     public ManualTriggerController(
             FeedIngestionOperations feedIngestionOperations,
             BriefGenerationService briefGenerationService,
+            AiBriefGenerationService aiBriefGenerationService,
             RssIngestionRunQueryService runQueryService
     ) {
         this.feedIngestionOperations = feedIngestionOperations;
         this.briefGenerationService = briefGenerationService;
+        this.aiBriefGenerationService = aiBriefGenerationService;
         this.runQueryService = runQueryService;
     }
 
@@ -110,11 +115,54 @@ public class ManualTriggerController {
     })
     @PostMapping("/briefs/markdown")
     public MarkdownBriefResponse generateMarkdownBrief(@RequestBody MarkdownBriefRequest request) {
-        if (request == null || request.startInclusive() == null || request.endExclusive() == null) {
-            throw new IllegalArgumentException("startInclusive 和 endExclusive 必须提供");
-        }
+        validateBriefWindowRequest(request);
 
         String markdown = briefGenerationService.generate(request.startInclusive(), request.endExclusive());
         return new MarkdownBriefResponse(request.startInclusive(), request.endExclusive(), markdown);
+    }
+
+    @Operation(summary = "生成 AI 摘要简报", description = "按半开时间窗口生成确定性 Markdown 草稿，并调用 AI 生成摘要版 Markdown。")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "返回 Markdown 草稿和 AI 摘要",
+                    content = @Content(schema = @Schema(implementation = AiSummaryBriefResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "请求体或时间窗口非法",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "503",
+                    description = "AI 摘要未启用",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "502",
+                    description = "AI Provider 调用失败",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            )
+    })
+    @PostMapping("/briefs/ai-summary")
+    public AiSummaryBriefResponse generateAiSummaryBrief(@RequestBody MarkdownBriefRequest request) {
+        validateBriefWindowRequest(request);
+
+        AiBriefGenerationResult result = aiBriefGenerationService.generate(
+                request.startInclusive(),
+                request.endExclusive()
+        );
+        return new AiSummaryBriefResponse(
+                result.startInclusive(),
+                result.endExclusive(),
+                result.draftMarkdown(),
+                result.summaryMarkdown()
+        );
+    }
+
+    private void validateBriefWindowRequest(MarkdownBriefRequest request) {
+        if (request == null || request.startInclusive() == null || request.endExclusive() == null) {
+            throw new IllegalArgumentException("startInclusive 和 endExclusive 必须提供");
+        }
     }
 }

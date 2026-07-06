@@ -1,5 +1,6 @@
 package cn.name.celestrong.signalbrief.config;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -14,15 +15,13 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /**
- * RSS feed HTTP 客户端装配。
- *
- * <p>该 bean 独立于其他 RestClient 用法，避免外部 feed 的超时和请求头设置影响其他调用。</p>
+ * AI Provider 专用 HTTP 客户端装配，避免和其他 RestClient 用法混用。
  */
 @Configuration(proxyBeanMethods = false)
-public class FeedHttpConfiguration {
+public class AiSummaryConfiguration {
 
     @Bean
-    HttpComponentsClientHttpRequestFactory feedClientHttpRequestFactory(FeedHttpProperties properties) {
+    HttpComponentsClientHttpRequestFactory aiSummaryClientHttpRequestFactory(AiSummaryProperties properties) {
         ConnectionConfig connectionConfig = ConnectionConfig.custom()
                 .setConnectTimeout(Timeout.of(properties.connectTimeout()))
                 .build();
@@ -40,15 +39,20 @@ public class FeedHttpConfiguration {
     }
 
     @Bean
-    RestClient feedRestClient(
+    RestClient aiSummaryRestClient(
             RestClient.Builder restClientBuilder,
-            @Qualifier("feedClientHttpRequestFactory")
-            HttpComponentsClientHttpRequestFactory feedClientHttpRequestFactory,
-            FeedHttpProperties properties
+            @Qualifier("aiSummaryClientHttpRequestFactory")
+            HttpComponentsClientHttpRequestFactory aiSummaryClientHttpRequestFactory,
+            AiSummaryProperties properties
     ) {
-        return restClientBuilder
-                .requestFactory(feedClientHttpRequestFactory)
-                .defaultHeader(HttpHeaders.USER_AGENT, properties.userAgent())
-                .build();
+        RestClient.Builder builder = restClientBuilder.clone()
+                .requestFactory(aiSummaryClientHttpRequestFactory);
+        if (StringUtils.isNotBlank(properties.baseUrl())) {
+            builder.baseUrl(StringUtils.stripEnd(properties.baseUrl(), "/"));
+        }
+        if (StringUtils.isNotBlank(properties.apiKey())) {
+            builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey());
+        }
+        return builder.build();
     }
 }
