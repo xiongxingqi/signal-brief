@@ -2,6 +2,8 @@ package cn.name.celestrong.signalbrief.internal;
 
 import cn.name.celestrong.signalbrief.brief.AiBriefGenerationResult;
 import cn.name.celestrong.signalbrief.brief.AiBriefGenerationService;
+import cn.name.celestrong.signalbrief.brief.BriefArchiveService;
+import cn.name.celestrong.signalbrief.brief.BriefGeneration;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationService;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionOperations;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionResult;
@@ -9,6 +11,8 @@ import cn.name.celestrong.signalbrief.ingestion.IngestionTriggerType;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRun;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunDetail;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunQueryService;
+import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryResult;
+import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -32,7 +36,7 @@ import java.util.List;
  *
  * <p>该入口只做 HTTP 协议适配，具体入库和简报生成逻辑继续委托应用服务。</p>
  */
-@Tag(name = "内部手动触发", description = "RSS 入库、Markdown 简报草稿和 AI 摘要的手动触发接口")
+@Tag(name = "内部手动触发", description = "RSS 入库、Markdown 简报草稿、AI 摘要、简报归档和邮件发送的手动触发接口")
 @RestController
 @RequestMapping("/internal")
 @ConditionalOnProperty(prefix = "signal-brief.internal-api", name = "enabled", havingValue = "true")
@@ -41,17 +45,23 @@ public class ManualTriggerController {
     private final FeedIngestionOperations feedIngestionOperations;
     private final BriefGenerationService briefGenerationService;
     private final AiBriefGenerationService aiBriefGenerationService;
+    private final BriefArchiveService briefArchiveService;
+    private final BriefMailDeliveryService briefMailDeliveryService;
     private final RssIngestionRunQueryService runQueryService;
 
     public ManualTriggerController(
             FeedIngestionOperations feedIngestionOperations,
             BriefGenerationService briefGenerationService,
             AiBriefGenerationService aiBriefGenerationService,
+            BriefArchiveService briefArchiveService,
+            BriefMailDeliveryService briefMailDeliveryService,
             RssIngestionRunQueryService runQueryService
     ) {
         this.feedIngestionOperations = feedIngestionOperations;
         this.briefGenerationService = briefGenerationService;
         this.aiBriefGenerationService = aiBriefGenerationService;
+        this.briefArchiveService = briefArchiveService;
+        this.briefMailDeliveryService = briefMailDeliveryService;
         this.runQueryService = runQueryService;
     }
 
@@ -158,6 +168,65 @@ public class ManualTriggerController {
                 result.draftMarkdown(),
                 result.summaryMarkdown()
         );
+    }
+
+    @Operation(summary = "归档 AI 摘要简报", description = "按半开时间窗口生成 Markdown 草稿和 AI 摘要，并保存为可发送的简报归档。")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "返回简报归档记录",
+                    content = @Content(schema = @Schema(implementation = BriefGeneration.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "请求体或时间窗口非法",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "503",
+                    description = "AI 摘要未启用",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "502",
+                    description = "AI Provider 调用失败，响应包含已创建的归档记录 ID",
+                    content = @Content(schema = @Schema(implementation = BriefArchiveErrorResponse.class))
+            )
+    })
+    @PostMapping("/briefs/ai-summary/archives")
+    public BriefGeneration archiveAiSummaryBrief(@RequestBody MarkdownBriefRequest request) {
+        validateBriefWindowRequest(request);
+
+        return briefArchiveService.archiveAiSummary(request.startInclusive(), request.endExclusive());
+    }
+
+    @Operation(summary = "发送简报归档邮件", description = "将已成功生成的简报归档发送到配置的收件人列表。")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "返回邮件发送记录",
+                    content = @Content(schema = @Schema(implementation = BriefMailDeliveryResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "简报归档记录不存在",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "简报归档尚不可发送",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "503",
+                    description = "邮件发送能力不可用",
+                    content = @Content(schema = @Schema(implementation = InternalApiErrorResponse.class))
+            )
+    })
+    @PostMapping("/briefs/{id}/mail-deliveries")
+    public BriefMailDeliveryResponse deliverArchivedBriefMail(@PathVariable Long id) {
+        BriefMailDeliveryResult result = briefMailDeliveryService.deliver(id);
+        return new BriefMailDeliveryResponse(result.briefGenerationId(), result.deliveries());
     }
 
     private void validateBriefWindowRequest(MarkdownBriefRequest request) {

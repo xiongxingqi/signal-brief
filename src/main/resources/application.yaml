@@ -21,6 +21,8 @@ spring:
       shutdown:
         await-termination: true
         await-termination-period: 30s
+  mail:
+    default-encoding: UTF-8
   docker:
     compose:
       enabled: ${SPRING_DOCKER_COMPOSE_ENABLED:false}
@@ -52,6 +54,11 @@ signal-brief:
     read-timeout: ${SIGNAL_BRIEF_AI_SUMMARY_READ_TIMEOUT:30s}
     temperature: ${SIGNAL_BRIEF_AI_SUMMARY_TEMPERATURE:0.2}
     max-output-tokens: ${SIGNAL_BRIEF_AI_SUMMARY_MAX_OUTPUT_TOKENS:2000}
+  mail:
+    enabled: ${SIGNAL_BRIEF_MAIL_ENABLED:false}
+    from: ${SIGNAL_BRIEF_MAIL_FROM:}
+    recipients: ${SIGNAL_BRIEF_MAIL_RECIPIENTS:}
+    subject-prefix: ${SIGNAL_BRIEF_MAIL_SUBJECT_PREFIX:SignalBrief 技术半月报}
   feed-http:
     user-agent: ${SIGNAL_BRIEF_FEED_HTTP_USER_AGENT:signal-brief/0.0.1}
     connect-timeout: ${SIGNAL_BRIEF_FEED_HTTP_CONNECT_TIMEOUT:3s}

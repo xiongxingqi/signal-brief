@@ -2,7 +2,11 @@ package cn.name.celestrong.signalbrief.internal;
 
 import cn.name.celestrong.signalbrief.ai.AiSummaryException;
 import cn.name.celestrong.signalbrief.ai.AiSummaryUnavailableException;
+import cn.name.celestrong.signalbrief.brief.BriefArchiveGenerationException;
+import cn.name.celestrong.signalbrief.brief.BriefGenerationNotFoundException;
+import cn.name.celestrong.signalbrief.brief.BriefGenerationNotReadyException;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunNotFoundException;
+import cn.name.celestrong.signalbrief.mail.BriefMailUnavailableException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -38,10 +42,34 @@ public class ManualTriggerExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new InternalApiErrorResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(BriefGenerationNotFoundException.class)
+    public ResponseEntity<InternalApiErrorResponse> handleBriefGenerationNotFound(BriefGenerationNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new InternalApiErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(BriefGenerationNotReadyException.class)
+    public ResponseEntity<InternalApiErrorResponse> handleBriefGenerationNotReady(BriefGenerationNotReadyException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new InternalApiErrorResponse(ex.getMessage()));
+    }
+
     @ExceptionHandler(AiSummaryUnavailableException.class)
     public ResponseEntity<InternalApiErrorResponse> handleAiSummaryUnavailable(AiSummaryUnavailableException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new InternalApiErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(BriefMailUnavailableException.class)
+    public ResponseEntity<InternalApiErrorResponse> handleBriefMailUnavailable(BriefMailUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new InternalApiErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(BriefArchiveGenerationException.class)
+    public ResponseEntity<BriefArchiveErrorResponse> handleBriefArchiveGenerationException(
+            BriefArchiveGenerationException ex
+    ) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new BriefArchiveErrorResponse("AI 摘要生成失败", ex.briefGenerationId()));
     }
 
     @ExceptionHandler(AiSummaryException.class)

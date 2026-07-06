@@ -8,9 +8,17 @@ import cn.name.celestrong.signalbrief.ai.AiSummaryService;
 import cn.name.celestrong.signalbrief.ai.AiSummaryUnavailableException;
 import cn.name.celestrong.signalbrief.brief.AiBriefGenerationResult;
 import cn.name.celestrong.signalbrief.brief.AiBriefGenerationService;
+import cn.name.celestrong.signalbrief.brief.BriefArchiveGenerationException;
+import cn.name.celestrong.signalbrief.brief.BriefArchiveService;
+import cn.name.celestrong.signalbrief.brief.BriefGeneration;
+import cn.name.celestrong.signalbrief.brief.BriefGenerationMapper;
+import cn.name.celestrong.signalbrief.brief.BriefGenerationNotFoundException;
+import cn.name.celestrong.signalbrief.brief.BriefGenerationNotReadyException;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationService;
+import cn.name.celestrong.signalbrief.brief.BriefGenerationStatus;
 import cn.name.celestrong.signalbrief.brief.BriefMarkdownRenderer;
 import cn.name.celestrong.signalbrief.config.AiSummaryProperties;
+import cn.name.celestrong.signalbrief.config.BriefMailProperties;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionOperations;
 import cn.name.celestrong.signalbrief.ingestion.FeedIngestionResult;
 import cn.name.celestrong.signalbrief.ingestion.IngestionRunStatus;
@@ -21,9 +29,18 @@ import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunDetail;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunNotFoundException;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionRunQueryService;
 import cn.name.celestrong.signalbrief.ingestion.RssIngestionSourceRun;
+import cn.name.celestrong.signalbrief.mail.BriefMailDelivery;
+import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryMapper;
+import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryResult;
+import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryService;
+import cn.name.celestrong.signalbrief.mail.BriefMailDeliveryStatus;
+import cn.name.celestrong.signalbrief.mail.BriefMailSender;
+import cn.name.celestrong.signalbrief.mail.BriefMailUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
@@ -33,6 +50,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -65,12 +83,20 @@ class ManualTriggerControllerTest {
     @Autowired
     private RecordingRssIngestionRunQueryService runQueryService;
 
+    @Autowired
+    private RecordingBriefArchiveService briefArchiveService;
+
+    @Autowired
+    private RecordingBriefMailDeliveryService briefMailDeliveryService;
+
     @BeforeEach
     void resetRecordingServices() {
         feedIngestionOperations.reset();
         briefGenerationService.reset();
         aiBriefGenerationService.reset();
         runQueryService.reset();
+        briefArchiveService.reset();
+        briefMailDeliveryService.reset();
     }
 
     @Test
@@ -201,6 +227,107 @@ class ManualTriggerControllerTest {
     }
 
     @Test
+    void archivesAiSummaryBriefForRequestedWindow() throws Exception {
+        mockMvc.perform(post("/internal/briefs/ai-summary/archives")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startInclusive": "2026-07-01T00:00:00Z",
+                                  "endExclusive": "2026-07-16T00:00:00Z"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(100))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.draftMarkdown").value("# SignalBrief 技术半月报\n"))
+                .andExpect(jsonPath("$.summaryMarkdown").value("## AI 摘要\n"));
+
+        assertEquals(1, briefArchiveService.calls);
+        assertEquals(Instant.parse("2026-07-01T00:00:00Z"), briefArchiveService.startInclusive);
+        assertEquals(Instant.parse("2026-07-16T00:00:00Z"), briefArchiveService.endExclusive);
+    }
+
+    @Test
+    void mapsArchiveAiProviderFailureToBadGateway() throws Exception {
+        briefArchiveService.failure = new BriefArchiveGenerationException(
+                100L,
+                "AI 摘要归档生成失败",
+                new AiSummaryException("AI Provider 返回 HTTP 500")
+        );
+
+        mockMvc.perform(post("/internal/briefs/ai-summary/archives")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startInclusive": "2026-07-01T00:00:00Z",
+                                  "endExclusive": "2026-07-16T00:00:00Z"
+                                }
+                                """))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.message").value("AI 摘要生成失败"))
+                .andExpect(jsonPath("$.briefGenerationId").value(100));
+    }
+
+    @Test
+    void mapsArchiveDisabledAiSummaryToServiceUnavailable() throws Exception {
+        briefArchiveService.failure = new AiSummaryUnavailableException("AI 摘要能力未启用");
+
+        mockMvc.perform(post("/internal/briefs/ai-summary/archives")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startInclusive": "2026-07-01T00:00:00Z",
+                                  "endExclusive": "2026-07-16T00:00:00Z"
+                                }
+                                """))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("AI 摘要能力未启用"));
+    }
+
+    @Test
+    void deliversArchivedBriefMail() throws Exception {
+        mockMvc.perform(post("/internal/briefs/100/mail-deliveries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.briefGenerationId").value(100))
+                .andExpect(jsonPath("$.deliveries[0].id").value(200))
+                .andExpect(jsonPath("$.deliveries[0].briefGenerationId").value(100))
+                .andExpect(jsonPath("$.deliveries[0].recipient").value("reader@example.com"))
+                .andExpect(jsonPath("$.deliveries[0].status").value("SENT"));
+
+        assertEquals(1, briefMailDeliveryService.calls);
+        assertEquals(100L, briefMailDeliveryService.briefGenerationId);
+    }
+
+    @Test
+    void mapsMissingBriefGenerationToNotFoundWhenDeliveringMail() throws Exception {
+        briefMailDeliveryService.failure = new BriefGenerationNotFoundException("简报归档记录不存在: 404");
+
+        mockMvc.perform(post("/internal/briefs/404/mail-deliveries"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("简报归档记录不存在: 404"));
+    }
+
+    @Test
+    void mapsNotReadyBriefGenerationToConflictWhenDeliveringMail() throws Exception {
+        briefMailDeliveryService.failure = new BriefGenerationNotReadyException(
+                "简报归档记录不可发送: 100, status=FAILED"
+        );
+
+        mockMvc.perform(post("/internal/briefs/100/mail-deliveries"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("简报归档记录不可发送: 100, status=FAILED"));
+    }
+
+    @Test
+    void mapsUnavailableMailToServiceUnavailableWhenDeliveringMail() throws Exception {
+        briefMailDeliveryService.failure = new BriefMailUnavailableException("邮件发送能力未启用");
+
+        mockMvc.perform(post("/internal/briefs/100/mail-deliveries"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("邮件发送能力未启用"));
+    }
+
+    @Test
     void rejectsInvalidAiSummaryWindow() throws Exception {
         mockMvc.perform(post("/internal/briefs/ai-summary")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -292,6 +419,16 @@ class ManualTriggerControllerTest {
         @Bean
         RecordingRssIngestionRunQueryService runQueryService() {
             return new RecordingRssIngestionRunQueryService();
+        }
+
+        @Bean
+        RecordingBriefArchiveService briefArchiveService() {
+            return new RecordingBriefArchiveService();
+        }
+
+        @Bean
+        RecordingBriefMailDeliveryService briefMailDeliveryService() {
+            return new RecordingBriefMailDeliveryService();
         }
     }
 
@@ -480,6 +617,165 @@ class ManualTriggerControllerTest {
                         throw new AssertionError("测试 fake 会覆盖 generate，不应调用 AI client");
                     }
             );
+        }
+    }
+
+    static class RecordingBriefArchiveService extends BriefArchiveService {
+
+        private int calls;
+        private Instant startInclusive;
+        private Instant endExclusive;
+        private RuntimeException failure;
+
+        RecordingBriefArchiveService() {
+            super(
+                    RecordingAiBriefGenerationService.failingBriefGenerationService(),
+                    RecordingAiBriefGenerationService.failingAiSummaryService(),
+                    failingBriefGenerationMapper()
+            );
+        }
+
+        @Override
+        public BriefGeneration archiveAiSummary(Instant startInclusive, Instant endExclusive) {
+            if (!startInclusive.isBefore(endExclusive)) {
+                throw new IllegalArgumentException("Brief candidate start time must be before end time");
+            }
+            calls++;
+            this.startInclusive = startInclusive;
+            this.endExclusive = endExclusive;
+            if (failure != null) {
+                throw failure;
+            }
+            Instant now = Instant.parse("2026-07-16T01:00:00Z");
+            return new BriefGeneration(
+                    100L,
+                    startInclusive,
+                    endExclusive,
+                    BriefGenerationStatus.SUCCESS,
+                    "# SignalBrief 技术半月报\n",
+                    "## AI 摘要\n",
+                    null,
+                    now,
+                    now,
+                    now
+            );
+        }
+
+        private void reset() {
+            calls = 0;
+            startInclusive = null;
+            endExclusive = null;
+            failure = null;
+        }
+
+        private static BriefGenerationMapper failingBriefGenerationMapper() {
+            return new BriefGenerationMapper() {
+                @Override
+                public Long insertGenerating(Instant startInclusive, Instant endExclusive, String draftMarkdown) {
+                    throw new AssertionError("测试 fake 会覆盖 archiveAiSummary，不应写入归档记录");
+                }
+
+                @Override
+                public int markSuccess(Long id, String summaryMarkdown, Instant completedAt) {
+                    throw new AssertionError("测试 fake 会覆盖 archiveAiSummary，不应更新归档记录");
+                }
+
+                @Override
+                public int markFailed(Long id, String errorSummary, Instant completedAt) {
+                    throw new AssertionError("测试 fake 会覆盖 archiveAiSummary，不应更新失败状态");
+                }
+
+                @Override
+                public Optional<BriefGeneration> findById(Long id) {
+                    throw new AssertionError("测试 fake 会覆盖 archiveAiSummary，不应查询归档记录");
+                }
+            };
+        }
+    }
+
+    static class RecordingBriefMailDeliveryService extends BriefMailDeliveryService {
+
+        private int calls;
+        private Long briefGenerationId;
+        private RuntimeException failure;
+
+        RecordingBriefMailDeliveryService() {
+            super(
+                    new BriefMailProperties(false, null, List.of(), null),
+                    new RecordingObjectProvider(),
+                    RecordingBriefArchiveService.failingBriefGenerationMapper(),
+                    failingBriefMailDeliveryMapper()
+            );
+        }
+
+        @Override
+        public BriefMailDeliveryResult deliver(Long briefGenerationId) {
+            calls++;
+            this.briefGenerationId = briefGenerationId;
+            if (failure != null) {
+                throw failure;
+            }
+            Instant now = Instant.parse("2026-07-16T02:00:00Z");
+            BriefMailDelivery delivery = new BriefMailDelivery(
+                    200L,
+                    briefGenerationId,
+                    "reader@example.com",
+                    BriefMailDeliveryStatus.SENT,
+                    "SignalBrief 技术半月报 2026-07-01 至 2026-07-16",
+                    null,
+                    now,
+                    now,
+                    now
+            );
+            return new BriefMailDeliveryResult(briefGenerationId, List.of(delivery));
+        }
+
+        private void reset() {
+            calls = 0;
+            briefGenerationId = null;
+            failure = null;
+        }
+
+        private static BriefMailDeliveryMapper failingBriefMailDeliveryMapper() {
+            return new BriefMailDeliveryMapper() {
+                @Override
+                public Long insertPending(Long briefGenerationId, String recipient, String subject) {
+                    throw new AssertionError("测试 fake 会覆盖 deliver，不应写入邮件记录");
+                }
+
+                @Override
+                public int markSent(Long id, Instant sentAt) {
+                    throw new AssertionError("测试 fake 会覆盖 deliver，不应更新邮件状态");
+                }
+
+                @Override
+                public int markFailed(Long id, String errorSummary) {
+                    throw new AssertionError("测试 fake 会覆盖 deliver，不应更新失败状态");
+                }
+
+                @Override
+                public Optional<BriefMailDelivery> findById(Long id) {
+                    throw new AssertionError("测试 fake 会覆盖 deliver，不应查询邮件记录");
+                }
+
+                @Override
+                public List<BriefMailDelivery> findByBriefGenerationId(Long briefGenerationId) {
+                    throw new AssertionError("测试 fake 会覆盖 deliver，不应查询邮件记录");
+                }
+            };
+        }
+    }
+
+    private static class RecordingObjectProvider implements ObjectProvider<BriefMailSender> {
+
+        @Override
+        public BriefMailSender getObject() throws BeansException {
+            throw new AssertionError("测试 fake 会覆盖 deliver，不应获取邮件发送器");
+        }
+
+        @Override
+        public BriefMailSender getIfAvailable() throws BeansException {
+            throw new AssertionError("测试 fake 会覆盖 deliver，不应获取邮件发送器");
         }
     }
 }
