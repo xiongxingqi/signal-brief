@@ -5,9 +5,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.sql.Types;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -144,10 +148,10 @@ class BriefGenerationMapperIT {
                                     ?
                                 )
                                 """,
-                        start,
-                        end,
+                        timestampWithTimeZone(start),
+                        timestampWithTimeZone(end),
                         "# draft\n",
-                        completedAt
+                        timestampWithTimeZone(completedAt)
                 )
         );
         assertThrows(
@@ -168,10 +172,10 @@ class BriefGenerationMapperIT {
                                     ?
                                 )
                                 """,
-                        start,
-                        end,
+                        timestampWithTimeZone(start),
+                        timestampWithTimeZone(end),
                         "# draft\n",
-                        completedAt
+                        timestampWithTimeZone(completedAt)
                 )
         );
     }
@@ -202,6 +206,13 @@ class BriefGenerationMapperIT {
                         "reader@example.com",
                         "SignalBrief 技术半月报"
                 )
+        );
+    }
+
+    private static SqlParameterValue timestampWithTimeZone(Instant instant) {
+        return new SqlParameterValue(
+                Types.TIMESTAMP_WITH_TIMEZONE,
+                OffsetDateTime.ofInstant(instant, ZoneOffset.UTC)
         );
     }
 }
