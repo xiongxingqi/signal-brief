@@ -9,6 +9,11 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
 
+/**
+ * 简报归档应用服务。
+ *
+ * <p>先保存 {@code GENERATING} 记录再调用 AI Provider，让失败也能被审计并返回归档 ID。</p>
+ */
 @Service
 public class BriefArchiveService {
 
@@ -44,6 +49,9 @@ public class BriefArchiveService {
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
+    /**
+     * 生成摘要版简报并持久化为可发送归档。
+     */
     public BriefGeneration archiveAiSummary(Instant startInclusive, Instant endExclusive) {
         aiSummaryService.requireAvailable();
         String draftMarkdown = briefGenerationService.generate(startInclusive, endExclusive);

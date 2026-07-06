@@ -5,6 +5,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
 
+/**
+ * 简报邮件发送配置。
+ *
+ * <p>邮件能力关闭时允许发件人和收件人为空；开启后必须显式配置，避免误发或静默丢信。</p>
+ */
 @ConfigurationProperties(prefix = "signal-brief.mail")
 public record BriefMailProperties(
         boolean enabled,

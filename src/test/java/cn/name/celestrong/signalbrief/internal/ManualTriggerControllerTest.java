@@ -432,6 +432,10 @@ class ManualTriggerControllerTest {
         }
     }
 
+    /*
+     * Web 切片测试只验证 HTTP 路由、序列化和异常映射。
+     * 这些 recording fake 会覆盖真实业务方法，构造器里的失败依赖用于防止测试误穿透到下层服务。
+     */
     static class RecordingFeedIngestionOperations implements FeedIngestionOperations {
 
         private int calls;

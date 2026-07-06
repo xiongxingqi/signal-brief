@@ -80,6 +80,7 @@ public class ManualTriggerExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<InternalApiErrorResponse> handleUnexpectedException() {
+        // 内部 API 对调用方隐藏未分类异常细节，具体堆栈留给服务端日志和测试排查。
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new InternalApiErrorResponse("内部接口执行失败"));
     }

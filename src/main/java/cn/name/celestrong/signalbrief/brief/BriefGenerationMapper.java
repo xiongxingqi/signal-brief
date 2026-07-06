@@ -11,9 +11,17 @@ import org.apache.ibatis.annotations.Update;
 import java.time.Instant;
 import java.util.Optional;
 
+/**
+ * 简报归档写入和状态转换 Mapper。
+ *
+ * <p>状态更新语句只允许从 {@code GENERATING} 转出，避免重复完成或失败覆盖已完成记录。</p>
+ */
 @Mapper
 public interface BriefGenerationMapper {
 
+    /**
+     * 创建生成中归档记录，并返回数据库生成的主键。
+     */
     @Select("""
             INSERT INTO brief_generation (
                 start_inclusive,
@@ -35,6 +43,9 @@ public interface BriefGenerationMapper {
             @Param("draftMarkdown") String draftMarkdown
     );
 
+    /**
+     * 将生成中记录标记为成功；返回 1 表示状态转换完成。
+     */
     @Update("""
             UPDATE brief_generation
             SET status = 'SUCCESS',
@@ -51,6 +62,9 @@ public interface BriefGenerationMapper {
             @Param("completedAt") Instant completedAt
     );
 
+    /**
+     * 将生成中记录标记为失败；返回 1 表示状态转换完成。
+     */
     @Update("""
             UPDATE brief_generation
             SET status = 'FAILED',

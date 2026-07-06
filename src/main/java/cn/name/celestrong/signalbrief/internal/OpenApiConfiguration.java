@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * 内部 API 的 OpenAPI 文档配置。
+ *
+ * <p>当前只暴露 {@code /internal/**} 分组；后续若增加公开 API，应新增独立分组和包扫描范围。</p>
  */
 @Configuration
 @ConditionalOnProperty(prefix = "springdoc.api-docs", name = "enabled", havingValue = "true")

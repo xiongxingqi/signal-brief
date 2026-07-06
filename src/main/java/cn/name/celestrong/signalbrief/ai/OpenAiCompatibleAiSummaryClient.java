@@ -13,6 +13,11 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
 
+/**
+ * 调用兼容 OpenAI Chat Completions 协议的摘要 Provider。
+ *
+ * <p>请求和响应 DTO 保持在适配器内部，避免协议字段泄露到应用服务层。</p>
+ */
 @Component
 public class OpenAiCompatibleAiSummaryClient implements AiSummaryClient {
 
@@ -53,6 +58,7 @@ public class OpenAiCompatibleAiSummaryClient implements AiSummaryClient {
                     .retrieve()
                     .body(ChatCompletionResponse.class);
         } catch (RestClientResponseException ex) {
+            // 不把 Provider 响应体透传给调用方，避免泄露供应商错误细节或敏感信息。
             throw new AiSummaryException("AI Provider 返回 HTTP " + ex.getStatusCode().value());
         } catch (ResourceAccessException ex) {
             throw new AiSummaryException("AI Provider 访问失败", ex);

@@ -95,6 +95,9 @@ public class BriefMarkdownRenderer {
         return UTC_TIME_FORMATTER.format(instant);
     }
 
+    /**
+     * 只转义来自外部文章内容的 Markdown 结构符，保留简报模板自身的标题和列表结构。
+     */
     private String escapeMarkdownText(String text) {
         if (text == null) {
             return "";
@@ -123,6 +126,7 @@ public class BriefMarkdownRenderer {
     }
 
     private boolean isMarkdownBlockPrefix(String text, int lineStartIndex, int index) {
+        // CommonMark 允许最多三个前导空格后仍形成块级语法，所以这里不能只检查行首字符。
         if (index < lineStartIndex || text.charAt(index) == ' ') {
             return false;
         }

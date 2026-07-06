@@ -12,9 +12,17 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 简报邮件投递记录 Mapper。
+ *
+ * <p>每个收件人一条投递记录，状态更新只从 {@code PENDING} 转出，便于重试和审计。</p>
+ */
 @Mapper
 public interface BriefMailDeliveryMapper {
 
+    /**
+     * 创建待发送记录，并返回数据库生成的主键。
+     */
     @Select("""
             INSERT INTO brief_mail_delivery (
                 brief_generation_id,
@@ -36,6 +44,9 @@ public interface BriefMailDeliveryMapper {
             @Param("subject") String subject
     );
 
+    /**
+     * 将待发送记录标记为已发送；返回 1 表示状态转换完成。
+     */
     @Update("""
             UPDATE brief_mail_delivery
             SET status = 'SENT',
@@ -50,6 +61,9 @@ public interface BriefMailDeliveryMapper {
             @Param("sentAt") Instant sentAt
     );
 
+    /**
+     * 将待发送记录标记为失败；返回 1 表示状态转换完成。
+     */
     @Update("""
             UPDATE brief_mail_delivery
             SET status = 'FAILED',

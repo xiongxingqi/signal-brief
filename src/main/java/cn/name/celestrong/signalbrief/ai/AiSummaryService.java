@@ -6,9 +6,17 @@ import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
+/**
+ * AI 摘要应用服务。
+ *
+ * <p>负责开关校验、编辑约束和异常归一，避免上层 HTTP 入口直接感知 Provider 细节。</p>
+ */
 @Service
 public class AiSummaryService {
 
+    /*
+     * 提示词在代码中固定，便于审查摘要口径；运行时配置只控制 Provider 连接参数。
+     */
     private static final String SYSTEM_PROMPT = """
             你是 SignalBrief 中文技术半月报编辑。
             读者是 Java 后端开发者。
@@ -28,12 +36,18 @@ public class AiSummaryService {
         this.aiSummaryClient = Objects.requireNonNull(aiSummaryClient, "aiSummaryClient must not be null");
     }
 
+    /**
+     * 在生成草稿或创建归档前先做可用性检查，避免无意义的候选文章查询和持久化副作用。
+     */
     public void requireAvailable() {
         if (!properties.enabled()) {
             throw new AiSummaryUnavailableException("AI 摘要能力未启用");
         }
     }
 
+    /**
+     * 将确定性 Markdown 草稿压缩为摘要版 Markdown。
+     */
     public String summarizeMarkdown(String markdownDraft) {
         requireAvailable();
         if (StringUtils.isBlank(markdownDraft)) {

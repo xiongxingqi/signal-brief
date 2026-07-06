@@ -17,16 +17,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 简报邮件投递编排服务。
+ *
+ * <p>只发送已成功生成的简报归档，并按收件人分别记录成功或失败结果。</p>
+ */
 @Service
 public class BriefMailDeliveryService {
 
     private static final String DEFAULT_ERROR_SUMMARY = "邮件发送失败";
 
     private final BriefMailProperties properties;
+    /*
+     * 邮件是可选能力，延迟获取发送器可以保证应用在邮件关闭或 SMTP 未配置时仍能启动。
+     */
     private final ObjectProvider<BriefMailSender> senderProvider;
     private final BriefGenerationMapper briefGenerationMapper;
     private final BriefMailDeliveryMapper deliveryMapper;
     private final Clock clock;
+
     @Autowired
     public BriefMailDeliveryService(
             BriefMailProperties properties,
@@ -68,6 +77,7 @@ public class BriefMailDeliveryService {
         String subject = subject(archive);
         List<BriefMailDelivery> deliveries = new ArrayList<>();
         for (String recipient : properties.recipients()) {
+            // 先创建投递记录，再执行外部发送，确保单个收件人失败也有可追踪结果。
             Long deliveryId = deliveryMapper.insertPending(briefGenerationId, recipient, subject);
             RuntimeException sendFailure = send(sender, recipient, subject, archive.summaryMarkdown());
             if (sendFailure == null) {
