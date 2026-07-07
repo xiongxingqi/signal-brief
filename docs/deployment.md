@@ -65,20 +65,23 @@ java -version
 
 ```text
 /opt/signal-brief
+├── .env
 ├── app/
 ├── backup/
 ├── config/
+│   └── application-prod.yaml
 ├── releases/
 └── compose.yaml
 ```
 
 目录职责：
 
+- `.env`：Docker Compose 使用的 PostgreSQL 变量，同时供备份、恢复命令读取；只存在服务器本地，不提交 Git。
 - `app/`：保存当前运行的 jar，通常用软链接指向 `releases/` 中的具体版本。
 - `releases/`：保存历史 jar，便于快速回滚。
-- `config/`：保存生产环境变量文件，只存在服务器本地，不提交 Git。
+- `config/application-prod.yaml`：Spring Boot 包外生产配置，保存 datasource、功能开关、AI、SMTP 等应用运行配置；只存在服务器本地，不提交 Git。
 - `backup/`：保存数据库备份。
-- `compose.yaml`：管理 PostgreSQL 容器。
+- `compose.yaml`：管理 PostgreSQL 容器，默认读取同目录 `.env`。
 
 创建目录：
 
@@ -87,71 +90,108 @@ sudo mkdir -p /opt/signal-brief/{app,releases,config,backup}
 sudo chown -R celestrong:celestrong /opt/signal-brief
 ```
 
-## 生产环境变量
+## Docker Compose 环境变量
 
-生产环境变量建议放在：
+PostgreSQL 容器变量放在部署根目录：
 
 ```text
-/opt/signal-brief/config/signal-brief.env
+/opt/signal-brief/.env
 ```
 
 示例：
 
 ```env
-SPRING_PROFILES_ACTIVE=prod
-SPRING_DOCKER_COMPOSE_ENABLED=false
-SERVER_PORT=8080
-
 POSTGRES_DB=signal_brief
 POSTGRES_USER=signal_brief
 POSTGRES_PASSWORD=replace-with-strong-database-password
 POSTGRES_PORT=5432
-
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/signal_brief
-SPRING_DATASOURCE_USERNAME=signal_brief
-SPRING_DATASOURCE_PASSWORD=replace-with-strong-database-password
-
-SIGNAL_BRIEF_INTERNAL_API_ENABLED=false
-SPRINGDOC_API_DOCS_ENABLED=false
-SPRINGDOC_SWAGGER_UI_ENABLED=false
-SIGNAL_BRIEF_INGESTION_ENABLED=false
-SIGNAL_BRIEF_AI_SUMMARY_ENABLED=false
-SIGNAL_BRIEF_MAIL_ENABLED=false
 ```
 
-配置分层和环境变量命名规则统一见 [配置约定](configuration.md)。`SPRING_DATASOURCE_*` 和 `SERVER_PORT` 是 Spring Boot 标准环境变量，会自动绑定到 `spring.datasource.*` 和 `server.port`；`application.yaml` 为 datasource 保留注释示例，并提供默认端口 `8080`。`application-prod.yaml` 不再写这些占位符转发，也不提供生产 datasource 默认值。
+`.env` 由 Docker Compose 自动读取，也会被备份、恢复命令临时加载。不要把 `SPRING_*` 或 `SIGNAL_BRIEF_*` 应用配置混入这里，避免容器基础设施配置和 Spring 应用配置混在一起。
+
+## Spring 包外配置
+
+生产应用配置放在：
+
+```text
+/opt/signal-brief/config/application-prod.yaml
+```
+
+示例：
+
+```yaml
+server:
+  port: 8080
+
+spring:
+  docker:
+    compose:
+      enabled: false
+  datasource:
+    url: jdbc:postgresql://localhost:5432/signal_brief
+    username: signal_brief
+    password: replace-with-strong-database-password
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+signal-brief:
+  internal-api:
+    enabled: false
+  ingestion:
+    enabled: false
+  ai-summary:
+    enabled: false
+  mail:
+    enabled: false
+```
+
+配置分层和命名规则统一见 [配置约定](configuration.md)。`application-prod.yaml` 是包外配置，优先级高于 jar 内配置；systemd 会通过 `SPRING_CONFIG_ADDITIONAL_LOCATION=file:/opt/signal-brief/config/` 显式指定该目录。这里的 datasource 用户名、密码和库名必须与 `/opt/signal-brief/.env` 中 PostgreSQL 容器配置保持一致。
 
 开启 AI 摘要时再补充：
 
-```env
-SIGNAL_BRIEF_AI_SUMMARY_ENABLED=true
-SIGNAL_BRIEF_AI_SUMMARY_BASE_URL=https://api.example.com
-SIGNAL_BRIEF_AI_SUMMARY_API_KEY=replace-with-provider-api-key
-SIGNAL_BRIEF_AI_SUMMARY_MODEL=replace-with-provider-model
+```yaml
+signal-brief:
+  ai-summary:
+    enabled: true
+    base-url: https://api.example.com
+    api-key: replace-with-provider-api-key
+    model: replace-with-provider-model
 ```
 
 开启邮件发送时再补充：
 
-```env
-SIGNAL_BRIEF_MAIL_ENABLED=true
-SIGNAL_BRIEF_MAIL_FROM=noreply@example.com
-SIGNAL_BRIEF_MAIL_RECIPIENTS=reader@example.com
-SIGNAL_BRIEF_MAIL_SUBJECT_PREFIX="SignalBrief 技术半月报"
+```yaml
+spring:
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: replace-with-smtp-username
+    password: replace-with-smtp-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
-SPRING_MAIL_HOST=smtp.example.com
-SPRING_MAIL_PORT=587
-SPRING_MAIL_USERNAME=replace-with-smtp-username
-SPRING_MAIL_PASSWORD=replace-with-smtp-password
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+signal-brief:
+  mail:
+    enabled: true
+    from: noreply@example.com
+    recipients: reader@example.com
+    subject-prefix: SignalBrief 技术半月报
 ```
 
-环境变量文件会被 shell、Docker Compose 和 systemd 读取。密码、主题、API key 等值如果包含空格、`#`、`$`、`!` 等特殊字符，应使用引号包裹，并在首次启动前单独验证加载结果。
+密码、主题、API key 等值如果包含 YAML 特殊字符，应使用引号包裹，并在首次启动前单独验证加载结果。
 
 配置文件权限建议：
 
 ```bash
-chmod 600 /opt/signal-brief/config/signal-brief.env
+chmod 600 /opt/signal-brief/.env /opt/signal-brief/config/application-prod.yaml
 ```
 
 ## PostgreSQL 启动与持久化
@@ -162,9 +202,6 @@ chmod 600 /opt/signal-brief/config/signal-brief.env
 
 ```bash
 cd /opt/signal-brief
-set -a
-. /opt/signal-brief/config/signal-brief.env
-set +a
 docker compose up -d postgres
 docker compose ps
 ```
@@ -225,7 +262,8 @@ Wants=network-online.target
 User=celestrong
 Group=celestrong
 WorkingDirectory=/opt/signal-brief
-EnvironmentFile=/opt/signal-brief/config/signal-brief.env
+Environment=SPRING_PROFILES_ACTIVE=prod
+Environment=SPRING_CONFIG_ADDITIONAL_LOCATION=file:/opt/signal-brief/config/
 ExecStart=/usr/bin/java -jar /opt/signal-brief/app/signal-brief.jar
 SuccessExitStatus=143
 Restart=on-failure
@@ -272,29 +310,41 @@ sudo systemctl stop signal-brief
 
 如果启动失败，优先检查：
 
-- `SPRING_PROFILES_ACTIVE=prod` 是否设置。
-- `SPRING_DATASOURCE_URL`、`SPRING_DATASOURCE_USERNAME`、`SPRING_DATASOURCE_PASSWORD` 是否存在。
+- systemd 中 `SPRING_PROFILES_ACTIVE=prod` 是否设置。
+- `/opt/signal-brief/config/application-prod.yaml` 是否存在且服务用户可读。
+- `spring.datasource.url`、`spring.datasource.username`、`spring.datasource.password` 是否存在，并与 `/opt/signal-brief/.env` 中 PostgreSQL 配置一致。
 - PostgreSQL 是否健康。
 - Flyway 是否因为迁移校验失败而阻止启动。
-- `SERVER_PORT` 是否被占用。
+- `server.port` 是否被占用。
 
 ## 首次试运行流程
 
 首次启动建议使用最小副作用配置：
 
-```env
-SIGNAL_BRIEF_INTERNAL_API_ENABLED=false
-SPRINGDOC_API_DOCS_ENABLED=false
-SPRINGDOC_SWAGGER_UI_ENABLED=false
-SIGNAL_BRIEF_INGESTION_ENABLED=false
-SIGNAL_BRIEF_AI_SUMMARY_ENABLED=false
-SIGNAL_BRIEF_MAIL_ENABLED=false
+```yaml
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+signal-brief:
+  internal-api:
+    enabled: false
+  ingestion:
+    enabled: false
+  ai-summary:
+    enabled: false
+  mail:
+    enabled: false
 ```
 
 确认应用启动成功后，再临时开启内部 API：
 
-```env
-SIGNAL_BRIEF_INTERNAL_API_ENABLED=true
+```yaml
+signal-brief:
+  internal-api:
+    enabled: true
 ```
 
 重启应用后，从服务器本机或可信内网访问内部接口。阿里云安全组不要向公网开放 `8080`，需要远程操作时优先使用 SSH 登录服务器后执行本机 `curl`。
@@ -309,15 +359,17 @@ curl http://localhost:8080/internal/ingestions/rss/runs
 1. 手动触发 RSS 入库，确认返回 `runId`。
 2. 查询 RSS 运行记录，确认源级统计和失败摘要可见。
 3. 生成 Markdown 简报草稿，确认分类、链接和时间窗口正确。
-4. 配置真实 AI Provider 后开启 `SIGNAL_BRIEF_AI_SUMMARY_ENABLED=true`，只手动生成一次 AI 摘要。
+4. 配置真实 AI Provider 后开启 `signal-brief.ai-summary.enabled=true`，只手动生成一次 AI 摘要。
 5. 摘要质量确认后执行归档。
-6. 配置 SMTP 后开启 `SIGNAL_BRIEF_MAIL_ENABLED=true`，先发送到测试收件人。
+6. 配置 SMTP 后开启 `signal-brief.mail.enabled=true`，先发送到测试收件人。
 7. 查询简报归档和邮件记录，确认 `SUCCESS`、`SENT` 或 `FAILED` 状态可追踪。
 
 RSS 定时任务在试运行稳定前保持关闭。只有当手动链路稳定、备份可用、AI 和 SMTP 配置确认后，才考虑开启：
 
-```env
-SIGNAL_BRIEF_INGESTION_ENABLED=true
+```yaml
+signal-brief:
+  ingestion:
+    enabled: true
 ```
 
 ## 备份与恢复
@@ -329,7 +381,7 @@ SIGNAL_BRIEF_INGESTION_ENABLED=true
 ```bash
 cd /opt/signal-brief
 set -a
-. /opt/signal-brief/config/signal-brief.env
+. /opt/signal-brief/.env
 set +a
 docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" > "/opt/signal-brief/backup/signal-brief-$(date +%Y%m%d%H%M%S).sql"
 ```
@@ -345,7 +397,7 @@ sudo systemctl stop signal-brief
 ```bash
 cd /opt/signal-brief
 set -a
-. /opt/signal-brief/config/signal-brief.env
+. /opt/signal-brief/.env
 set +a
 docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < /opt/signal-brief/backup/backup-file.sql
 ```
@@ -381,7 +433,7 @@ sudo systemctl start signal-brief
 
 ## 安全注意事项
 
-- 不要提交服务器上的 `signal-brief.env`。
+- 不要提交服务器上的 `.env` 和 `config/application-prod.yaml`。
 - 不要把内部 API 直接暴露到公网。
 - 阿里云安全组默认只开放 SSH；如需开放应用端口，必须先确认内部 API 和 OpenAPI 都处于关闭状态。
 - OpenAPI / Swagger UI 默认关闭，只在可信网络内临时开启。
