@@ -168,7 +168,7 @@ AI 模块围绕“可靠简报”设计，而不是追求模型能力堆叠：
 近期优先级：
 
 1. 使用真实 AI Provider 验证摘要 prompt、输出结构和超时配置。
-2. 补充部署文档，明确生产环境变量、数据库持久化、升级回滚和备份方式，并完成一次内网试运行部署。
+2. 基于部署设计记录和部署手册完成一次阿里云内网试运行部署。
 3. 增加抓取失败告警策略，并基于运行记录沉淀源级健康状态。
 4. 增加定时自动生成、归档和发送。
 5. 扩展邮件投递能力，例如 HTML 模板、失败重试和发送耗时统计。
@@ -194,5 +194,6 @@ AI 模块围绕“可靠简报”设计，而不是追求模型能力堆叠：
 - `docs/records/ai-summary-generation.md`：AI 摘要生成记录。
 - `docs/records/brief-archive-mail-delivery.md`：简报归档与邮件发送基础记录。
 - `docs/records/manual-trigger-api.md`：内部手动触发 API 和 OpenAPI 文档记录。
+- `docs/records/deployment-runbook.md`：第一版部署和内网试运行设计记录。
 
 本文档只描述项目定位、当前状态和路线。具体实现细节以源码、测试、迁移脚本和 records 文档为准。

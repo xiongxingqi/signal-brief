@@ -96,6 +96,7 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 - `src/main/resources/application-prod.yaml`：生产环境配置。
 - `src/test/resources/application-test.yaml`：测试环境配置。
 - `.env.example`：环境变量示例，不应包含真实密钥。
+- `docs/deployment.md`：阿里云内网试运行部署、备份、升级和回滚手册。
 
 本地私密配置放在 `.env`，不要提交真实数据库、SMTP 或 AI Provider 密钥。
 
