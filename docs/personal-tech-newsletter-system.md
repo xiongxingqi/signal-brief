@@ -86,39 +86,21 @@ RSS 入库运行记录由 `rss_ingestion_run` 和 `rss_ingestion_source_run` 保
 
 ## 配置与运行
 
-关键配置：
+完整配置分层、环境变量命名、必填项和当前配置清单见 [配置约定](configuration.md)。本项目的运行配置按两类处理：
 
-- `signal-brief.feeds`：RSS 源列表，第一版由配置文件维护，修改后需要重启应用。
-- `signal-brief.feed-http.user-agent`：RSS 抓取请求的 User-Agent，默认 `signal-brief/0.0.1`。
-- `signal-brief.feed-http.connect-timeout`：RSS 抓取连接超时，默认 `3s`。
-- `signal-brief.feed-http.read-timeout`：RSS 抓取读取超时，默认 `10s`。
-- `signal-brief.feed-http.retry.max-attempts`：RSS 抓取总尝试次数，默认 `2`。
-- `signal-brief.feed-http.retry.backoff`：RSS 抓取重试间隔，默认 `1s`。
-- `signal-brief.ingestion.enabled`：RSS 定时入库开关，默认 `false`。
-- `signal-brief.ingestion.cron`：RSS 入库 cron，默认 `0 0 6 1,16 * *`。
-- `signal-brief.internal-api.enabled`：内部手动触发 API 开关，默认 `false`。
-- `signal-brief.ai-summary.enabled`：AI 摘要开关，默认 `false`。
-- `signal-brief.ai-summary.base-url`：OpenAI-compatible Chat Completions Provider 地址。
-- `signal-brief.ai-summary.api-key`：AI Provider API key。
-- `signal-brief.ai-summary.model`：AI Provider 模型名称。
-- `signal-brief.ai-summary.connect-timeout`：AI Provider 连接超时，默认 `3s`。
-- `signal-brief.ai-summary.read-timeout`：AI Provider 读取超时，默认 `30s`。
-- `signal-brief.ai-summary.temperature`：AI 摘要生成温度，默认 `0.2`。
-- `signal-brief.ai-summary.max-output-tokens`：AI 摘要最大输出 token，默认 `2000`。
-- `signal-brief.mail.enabled`：邮件发送开关，默认 `false`。
-- `signal-brief.mail.from`：邮件发件人，开启邮件发送时必填。
-- `signal-brief.mail.recipients`：邮件收件人列表，开启邮件发送时必填。
-- `signal-brief.mail.subject-prefix`：邮件主题前缀，默认 `SignalBrief 技术半月报`。
-- `springdoc.api-docs.enabled`：OpenAPI 文档开关，默认通过 `SIGNAL_BRIEF_OPENAPI_ENABLED=false` 关闭。
-- datasource、SMTP、AI provider 等敏感配置通过环境变量注入。SMTP 主机、端口、用户名、密码和 TLS 等基础设施配置继续使用 Spring Boot 标准 `spring.mail.*`，不放入 `signal-brief.mail.*`。
+- Spring Boot 标准基础设施配置继续使用官方属性，例如 `spring.datasource.*`、`spring.mail.*`、`server.port` 和 `springdoc.*`。
+- 项目业务语义统一放在 `signal-brief.*`，例如 RSS 源、抓取超时、入库调度、内部 API、AI 摘要和邮件业务开关。
+
+可能访问外部系统、产生投递行为或暴露内部入口的能力默认关闭，包括 RSS 定时、内部 API、OpenAPI、AI 摘要和邮件发送。RSS 源列表通过 `signal-brief.feeds` 维护，修改后需要重启应用。
 
 环境变量和 profile 约束：
 
-- `application.yaml` 只保存跨环境公共配置，不设置 `spring.profiles.active`。
+- `application.yaml` 只保存跨环境公共配置、安全默认值和必要配置项的注释示例，不设置 `spring.profiles.active`。
 - `SPRING_PROFILES_ACTIVE` 由启动命令、CI 或部署平台显式指定；本地开发使用 `dev`，CI 使用 `test`，生产使用 `prod`。
-- 本地 `dev` 配置可以为 Docker Compose 示例服务提供安全默认值；`test` 和 `prod` 的 datasource、端口、密钥类配置保持必填，缺失时应尽早失败。
+- 本地 `dev` 配置可以为 Docker Compose 示例服务提供安全默认值；`test` 和 `prod` 的 datasource、端口等 Spring Boot 标准配置不在 YAML 中写占位符转发，统一依赖环境变量自动绑定；必需配置缺失时应在启动阶段失败。
+- Spring Boot 标准配置优先使用官方属性和环境变量自动绑定；项目自定义配置才放入 `signal-brief.*` 并通过配置属性类表达启用条件和校验规则。默认值直接写在 YAML 中，环境变量名称通过 `.env.example` 和配置约定说明。
 - 业务开关和内部接口开关默认关闭，避免启动时自动访问外部源或暴露管理入口。
-- 新增环境变量时同步更新 `.env.example`、README 和相关 records。
+- 新增环境变量时同步更新 `.env.example`、配置约定文档和相关 records。
 
 本地日常开发默认只跑基础测试：
 

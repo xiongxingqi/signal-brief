@@ -42,4 +42,6 @@ Git 提交规范以 [docs/git-commit-convention.md](docs/git-commit-convention.m
 
 ## 安全与配置
 
-不要提交真实密钥。本地凭据放在 `.env`，共享示例放在 `.env.example`。datasource、SMTP、AI provider 等敏感配置通过环境变量注入。新增环境变量时同步更新 `.env.example`，只提供安全示例值。
+配置约定统一见 [docs/configuration.md](docs/configuration.md)。不要提交真实密钥；本地凭据放在 `.env`，共享示例放在 `.env.example`。datasource、SMTP、AI provider 等敏感配置通过环境变量注入。
+
+新增或调整配置时，同步检查 `application.yaml`、profile 配置、`.env.example`、配置文档和相关测试。普通默认值直接写 YAML；启用后才必填或敏感的值使用注释示例和环境变量说明，不写空字符串占位。Spring Boot 标准配置优先使用官方属性和环境变量自动绑定，项目业务语义统一放入 `signal-brief.*`。

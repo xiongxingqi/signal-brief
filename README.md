@@ -89,52 +89,24 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 
 ## 配置说明
 
+配置分层、环境变量命名、必填项校验和新增配置检查清单统一见 [docs/configuration.md](docs/configuration.md)。本地私密配置放在 `.env`，共享示例放在 `.env.example`，不要提交真实数据库、SMTP 或 AI Provider 密钥。
+
 核心配置文件：
 
-- `src/main/resources/application.yaml`：跨环境公共配置、Flyway 路径、线程池配置和默认关闭的业务开关。
-- `src/main/resources/application-dev.yaml`：本地开发配置。
-- `src/main/resources/application-prod.yaml`：生产环境配置。
-- `src/test/resources/application-test.yaml`：测试环境配置。
-- `.env.example`：环境变量示例，不应包含真实密钥。
+- `src/main/resources/application.yaml`：跨环境公共配置、安全默认值和必要配置项的注释示例。
+- `src/main/resources/application-dev.yaml`：本地开发便利默认值。
+- `src/main/resources/application-prod.yaml`：生产 profile 差异，不保存真实基础设施值。
+- `src/test/resources/application-test.yaml`：测试 profile 差异。
+- `.env.example`：环境变量示例和说明。
 - `docs/deployment.md`：阿里云内网试运行部署、备份、升级和回滚手册。
 
-本地私密配置放在 `.env`，不要提交真实数据库、SMTP 或 AI Provider 密钥。
+关键原则：
 
-环境变量配置原则：
-
-- Profile 由外部环境显式指定，例如 `SPRING_PROFILES_ACTIVE=dev|test|prod`；不要在 `application.yaml` 中设置 `spring.profiles.active`。
-- `application.yaml` 只放跨环境公共配置和安全默认值，例如默认关闭的业务开关。
-- `application-dev.yaml` 可以提供匹配本地 Docker Compose 的便利默认值；`application-prod.yaml` 和 `application-test.yaml` 对 datasource、端口等基础设施配置保持必填，占位符不写默认值。
-- 新增环境变量时同步更新 `.env.example` 和本文档；敏感值只写变量名，不写真实密钥。
-- 手动触发、OpenAPI、定时任务等可能产生副作用或暴露接口的开关默认关闭，需要运行时显式开启。
-
-常用环境变量：
-
-- `SIGNAL_BRIEF_INGESTION_ENABLED`：RSS 定时入库开关，默认 `false`。
-- `SIGNAL_BRIEF_INGESTION_CRON`：RSS 入库 cron，默认 `0 0 6 1,16 * *`。
-- `SIGNAL_BRIEF_FEED_HTTP_USER_AGENT`：RSS 抓取请求的 User-Agent，默认 `signal-brief/0.0.1`。
-- `SIGNAL_BRIEF_FEED_HTTP_CONNECT_TIMEOUT`：RSS 抓取连接超时，默认 `3s`。
-- `SIGNAL_BRIEF_FEED_HTTP_READ_TIMEOUT`：RSS 抓取读取超时，默认 `10s`。
-- `SIGNAL_BRIEF_FEED_HTTP_RETRY_MAX_ATTEMPTS`：RSS 抓取总尝试次数，默认 `2`。
-- `SIGNAL_BRIEF_FEED_HTTP_RETRY_BACKOFF`：RSS 抓取重试间隔，默认 `1s`。
-- `SIGNAL_BRIEF_INTERNAL_API_ENABLED`：内部手动触发 API 开关，默认 `false`。
-- `SIGNAL_BRIEF_OPENAPI_ENABLED`：OpenAPI / Swagger UI 文档开关，默认 `false`。
-- `SIGNAL_BRIEF_AI_SUMMARY_ENABLED`：AI 摘要开关，默认 `false`。
-- `SIGNAL_BRIEF_AI_SUMMARY_BASE_URL`：OpenAI-compatible Chat Completions Provider 地址。
-- `SIGNAL_BRIEF_AI_SUMMARY_API_KEY`：AI Provider API key，不要提交真实值。
-- `SIGNAL_BRIEF_AI_SUMMARY_MODEL`：AI Provider 模型名称。
-- `SIGNAL_BRIEF_AI_SUMMARY_CONNECT_TIMEOUT`：AI Provider 连接超时，默认 `3s`。
-- `SIGNAL_BRIEF_AI_SUMMARY_READ_TIMEOUT`：AI Provider 读取超时，默认 `30s`。
-- `SIGNAL_BRIEF_AI_SUMMARY_TEMPERATURE`：摘要生成温度，默认 `0.2`。
-- `SIGNAL_BRIEF_AI_SUMMARY_MAX_OUTPUT_TOKENS`：摘要最大输出 token，默认 `2000`。
-- `SIGNAL_BRIEF_MAIL_ENABLED`：邮件发送开关，默认 `false`。
-- `SIGNAL_BRIEF_MAIL_FROM`：邮件发件人；开启邮件发送时必填。
-- `SIGNAL_BRIEF_MAIL_RECIPIENTS`：邮件收件人列表，多个收件人使用逗号分隔；开启邮件发送时必填。
-- `SIGNAL_BRIEF_MAIL_SUBJECT_PREFIX`：邮件主题前缀，默认 `SignalBrief 技术半月报`。
-- `SPRING_MAIL_HOST`、`SPRING_MAIL_PORT`、`SPRING_MAIL_USERNAME`、`SPRING_MAIL_PASSWORD`：Spring Boot 标准 SMTP 配置，不要提交真实凭据。
-- `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH`、`SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE`：Spring Mail SMTP 认证和 STARTTLS 示例配置。
-
-邮件发送需要同时满足：`SIGNAL_BRIEF_MAIL_ENABLED=true`、已配置 `SIGNAL_BRIEF_MAIL_FROM` 和 `SIGNAL_BRIEF_MAIL_RECIPIENTS`，并提供有效的 `spring.mail.*` SMTP 基础设施配置。`signal-brief.mail.*` 只保存业务开关、发件人、收件人和主题前缀，不保存 SMTP 主机、用户名或密码。
+- Profile 由外部显式指定，例如 `SPRING_PROFILES_ACTIVE=dev|test|prod`；不要在 `application.yaml` 中设置 `spring.profiles.active`。
+- 普通默认值直接写在 YAML 中，不为同名环境变量额外写 `${ENV:default}` 转发。
+- Spring Boot 标准配置使用官方属性和标准环境变量，例如 `spring.datasource.*` / `SPRING_DATASOURCE_*`。
+- 项目业务配置统一放在 `signal-brief.*`，环境变量使用大写下划线形式，例如 `SIGNAL_BRIEF_INTERNAL_API_ENABLED`。
+- 手动触发、OpenAPI、定时任务、AI 和邮件等可能产生副作用或暴露入口的开关默认关闭。
 
 ## 测试策略
 
@@ -191,7 +163,8 @@ SPRING_PROFILES_ACTIVE=dev SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boo
 ```bash
 SPRING_PROFILES_ACTIVE=dev \
 SIGNAL_BRIEF_INTERNAL_API_ENABLED=true \
-SIGNAL_BRIEF_OPENAPI_ENABLED=true \
+SPRINGDOC_API_DOCS_ENABLED=true \
+SPRINGDOC_SWAGGER_UI_ENABLED=true \
 ./mvnw spring-boot:run
 ```
 

@@ -86,7 +86,7 @@ SPRING_PROFILES_ACTIVE=dev SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boo
 - `GET /internal/ingestions/rss/runs`：按开始时间倒序查询最近的 RSS 入库运行记录。
 - `GET /internal/ingestions/rss/runs/{id}`：查询单次 RSS 入库运行及各源执行明细。
 
-OpenAPI 文档由 `SIGNAL_BRIEF_OPENAPI_ENABLED` 控制，默认关闭；本地开启后可访问 `/internal/api-docs/internal` 和 `/internal/swagger-ui.html`。当前文档通过 internal 分组匹配 `/internal/**`，后续对外 API 应新增 public 分组，不要使用全局扫描配置互相影响。
+OpenAPI 文档由 `SPRINGDOC_API_DOCS_ENABLED` 和 `SPRINGDOC_SWAGGER_UI_ENABLED` 控制，默认关闭；本地开启后可访问 `/internal/api-docs/internal` 和 `/internal/swagger-ui.html`。当前文档通过 internal 分组匹配 `/internal/**`，后续对外 API 应新增 public 分组，不要使用全局扫描配置互相影响。
 
 ## 数据与去重
 

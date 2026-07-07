@@ -48,7 +48,7 @@
 - `signal-brief.mail.from` 和 `signal-brief.mail.recipients`：邮件发件人和收件人，开启邮件发送时必填。
 - `signal-brief.mail.subject-prefix`：邮件主题前缀，对应环境变量 `SIGNAL_BRIEF_MAIL_SUBJECT_PREFIX`。
 - `spring.mail.*`：Spring Boot 标准 SMTP 基础设施配置，用于主机、端口、用户名、密码和 TLS 等。
-- `springdoc.api-docs.enabled` 和 `springdoc.swagger-ui.enabled`：OpenAPI / Swagger UI 开关，对应环境变量 `SIGNAL_BRIEF_OPENAPI_ENABLED`，默认 `false`。
+- `springdoc.api-docs.enabled` 和 `springdoc.swagger-ui.enabled`：OpenAPI / Swagger UI 开关，对应环境变量 `SPRINGDOC_API_DOCS_ENABLED` 和 `SPRINGDOC_SWAGGER_UI_ENABLED`，默认 `false`。
 - OpenAPI JSON 路径为 `/internal/api-docs/internal`。
 - Swagger UI 路径为 `/internal/swagger-ui.html`。
 

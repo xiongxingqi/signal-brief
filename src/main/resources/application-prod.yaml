@@ -1,11 +1,3 @@
-server:
-  port: ${SERVER_PORT}
-spring:
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
-    url: ${SPRING_DATASOURCE_URL}
 logging:
   level:
     root: info

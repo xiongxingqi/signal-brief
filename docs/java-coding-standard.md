@@ -220,15 +220,21 @@ private static final int POST_VISIBLE_DAYS_FOR_HALF_YEAR = 180;
 
 ### 自定义配置与自动配置边界
 
+项目配置分层、环境变量命名、必填项和新增配置检查清单统一见 [配置约定](configuration.md)。本节只约束代码侧边界。
+
 - 默认优先使用 Spring Boot 自动配置和官方属性；只有现有属性无法表达项目语义，或需要隔离某个能力的行为时，才新增自定义配置或 Bean。
 - 项目自定义配置统一放在 `signal-brief.*` 前缀下，通过 `@ConfigurationProperties` record 建模；不要把项目语义塞进 `spring.*`，也不要在业务代码中直接读取散落的环境变量。
+- datasource、mail、server、springdoc 等 Spring Boot 标准配置优先依赖官方属性和环境变量自动绑定；不要在 YAML 中为 `SPRING_*`、`SPRINGDOC_*`、`SERVER_PORT` 等标准环境变量再写一层无意义的占位符转发。
+- 项目自定义配置的默认值应在 YAML 中直接写明，由环境变量通过 relaxed binding 覆盖；开启能力后才必填的地址、密钥、模型、发件人和收件人等值，用注释示例、`.env.example` 和配置文档说明，不在默认配置里写真实值。
+- 必须配置但不适合提交真实值的基础设施项优先在公共 YAML 中保留注释示例，用于暴露配置结构；运行环境必须通过 profile 配置或环境变量显式提供。
+- Spring Mail 的 `spring.mail.host` 不要用空字符串占位；该属性一旦存在就会触发 `JavaMailSender` 自动配置。需要展示 SMTP 配置结构时，用注释、`.env.example` 和配置文档说明。
 - 自定义 Bean 默认暴露业务语义清晰的 Bean，例如 `feedRestClient`；除非确实要作为全局扩展点，不要随意暴露 `ObjectMapper`、`RestClientCustomizer`、`ClientHttpRequestFactory`、`TaskExecutor`、`CacheManager` 等通用类型 Bean。
 - 多个同类型 Bean 并存时，禁止裸注入通用类型；使用有语义的 Bean 名称和 `@Qualifier` 明确选择，例如 `@Qualifier("feedRestClient") RestClient restClient`。
 - 谨慎使用 `@Primary`。只有确实存在全局默认实现，并且所有无 `@Qualifier` 注入点都应使用它时，才允许加 `@Primary`。
 - 谨慎使用 `RestClientCustomizer`、`Jackson2ObjectMapperBuilderCustomizer`、`WebMvcConfigurer`、`SecurityFilterChain`、`FlywayConfigurationCustomizer` 等全局扩展点。使用前要确认影响范围，并在配置类或 record 文档中说明原因。
 - 专用 HTTP 客户端优先通过专用 `RestClient` 隔离超时、默认 header、重试和日志；不要修改全局 `RestClient.Builder` 来满足单个外部系统的需求。
 - `@Configuration(proxyBeanMethods = false)` 只用于配置类内部不直接调用其他 `@Bean` 方法的场景；需要引用其他 Bean 时，优先通过 `@Bean` 方法参数注入，让 Spring 容器解析依赖。
-- 新增自定义配置时，同步补充配置绑定测试、`.env.example`、README 或相关 record，验证默认值、显式绑定和非法值处理。
+- 新增自定义配置时，同步补充配置绑定测试、`.env.example`、配置文档或相关 record，验证默认值、显式绑定和非法值处理。
 
 ## MyBatis 与数据库
 

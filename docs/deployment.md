@@ -112,11 +112,14 @@ SPRING_DATASOURCE_USERNAME=signal_brief
 SPRING_DATASOURCE_PASSWORD=replace-with-strong-database-password
 
 SIGNAL_BRIEF_INTERNAL_API_ENABLED=false
-SIGNAL_BRIEF_OPENAPI_ENABLED=false
+SPRINGDOC_API_DOCS_ENABLED=false
+SPRINGDOC_SWAGGER_UI_ENABLED=false
 SIGNAL_BRIEF_INGESTION_ENABLED=false
 SIGNAL_BRIEF_AI_SUMMARY_ENABLED=false
 SIGNAL_BRIEF_MAIL_ENABLED=false
 ```
+
+配置分层和环境变量命名规则统一见 [配置约定](configuration.md)。`SPRING_DATASOURCE_*` 和 `SERVER_PORT` 是 Spring Boot 标准环境变量，会自动绑定到 `spring.datasource.*` 和 `server.port`；`application.yaml` 为 datasource 保留注释示例，并提供默认端口 `8080`。`application-prod.yaml` 不再写这些占位符转发，也不提供生产 datasource 默认值。
 
 开启 AI 摘要时再补充：
 
@@ -281,7 +284,8 @@ sudo systemctl stop signal-brief
 
 ```env
 SIGNAL_BRIEF_INTERNAL_API_ENABLED=false
-SIGNAL_BRIEF_OPENAPI_ENABLED=false
+SPRINGDOC_API_DOCS_ENABLED=false
+SPRINGDOC_SWAGGER_UI_ENABLED=false
 SIGNAL_BRIEF_INGESTION_ENABLED=false
 SIGNAL_BRIEF_AI_SUMMARY_ENABLED=false
 SIGNAL_BRIEF_MAIL_ENABLED=false

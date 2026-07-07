@@ -1,6 +1,15 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: signal-brief
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    # 数据库连接配置通过 SPRING_DATASOURCE_* 环境变量或 profile 配置提供。
+    # url: jdbc:postgresql://localhost:5432/signal_brief
+    # username: celestrong
+    # password: ""
   flyway:
     callback-locations: classpath:db/callback
     locations: classpath:db/migration
@@ -23,16 +32,28 @@ spring:
         await-termination-period: 30s
   mail:
     default-encoding: UTF-8
+    # SMTP 基础设施配置通过 SPRING_MAIL_* 环境变量提供。
+    # 不在默认配置中声明 host，避免未配置 SMTP 时触发 JavaMailSender 自动配置。
+    # host: smtp.example.com
+    # port: 587
+    # username: ""
+    # password: ""
+    # properties:
+    #   mail:
+    #     smtp:
+    #       auth: true
+    #       starttls:
+    #         enable: true
   docker:
     compose:
-      enabled: ${SPRING_DOCKER_COMPOSE_ENABLED:false}
+      enabled: false
 
 springdoc:
   api-docs:
-    enabled: ${SIGNAL_BRIEF_OPENAPI_ENABLED:false}
+    enabled: false
     path: /internal/api-docs
   swagger-ui:
-    enabled: ${SIGNAL_BRIEF_OPENAPI_ENABLED:false}
+    enabled: false
     path: /internal/swagger-ui.html
     urls:
       - name: internal
@@ -41,31 +62,33 @@ springdoc:
 
 signal-brief:
   internal-api:
-    enabled: ${SIGNAL_BRIEF_INTERNAL_API_ENABLED:false}
+    enabled: false
   ingestion:
-    enabled: ${SIGNAL_BRIEF_INGESTION_ENABLED:false}
-    cron: "${SIGNAL_BRIEF_INGESTION_CRON:0 0 6 1,16 * *}"
+    enabled: false
+    cron: "0 0 6 1,16 * *"
   ai-summary:
-    enabled: ${SIGNAL_BRIEF_AI_SUMMARY_ENABLED:false}
-    base-url: ${SIGNAL_BRIEF_AI_SUMMARY_BASE_URL:}
-    api-key: ${SIGNAL_BRIEF_AI_SUMMARY_API_KEY:}
-    model: ${SIGNAL_BRIEF_AI_SUMMARY_MODEL:}
-    connect-timeout: ${SIGNAL_BRIEF_AI_SUMMARY_CONNECT_TIMEOUT:3s}
-    read-timeout: ${SIGNAL_BRIEF_AI_SUMMARY_READ_TIMEOUT:30s}
-    temperature: ${SIGNAL_BRIEF_AI_SUMMARY_TEMPERATURE:0.2}
-    max-output-tokens: ${SIGNAL_BRIEF_AI_SUMMARY_MAX_OUTPUT_TOKENS:2000}
+    enabled: false
+    # AI Provider 配置通过 SIGNAL_BRIEF_AI_SUMMARY_* 环境变量提供。
+    # base-url: https://api.example.com/v1
+    # api-key: ""
+    # model: example-model
+    connect-timeout: 3s
+    read-timeout: 30s
+    temperature: 0.2
+    max-output-tokens: 2000
   mail:
-    enabled: ${SIGNAL_BRIEF_MAIL_ENABLED:false}
-    from: ${SIGNAL_BRIEF_MAIL_FROM:}
-    recipients: ${SIGNAL_BRIEF_MAIL_RECIPIENTS:}
-    subject-prefix: ${SIGNAL_BRIEF_MAIL_SUBJECT_PREFIX:SignalBrief 技术半月报}
+    enabled: false
+    # 邮件发件人和收件人通过 SIGNAL_BRIEF_MAIL_* 环境变量提供。
+    # from: noreply@example.com
+    # recipients: reader@example.com
+    subject-prefix: SignalBrief 技术半月报
   feed-http:
-    user-agent: ${SIGNAL_BRIEF_FEED_HTTP_USER_AGENT:signal-brief/0.0.1}
-    connect-timeout: ${SIGNAL_BRIEF_FEED_HTTP_CONNECT_TIMEOUT:3s}
-    read-timeout: ${SIGNAL_BRIEF_FEED_HTTP_READ_TIMEOUT:10s}
+    user-agent: signal-brief/0.0.1
+    connect-timeout: 3s
+    read-timeout: 10s
     retry:
-      max-attempts: ${SIGNAL_BRIEF_FEED_HTTP_RETRY_MAX_ATTEMPTS:2}
-      backoff: ${SIGNAL_BRIEF_FEED_HTTP_RETRY_BACKOFF:1s}
+      max-attempts: 2
+      backoff: 1s
   feeds:
     - name: Spring Blog
       url: https://spring.io/blog.atom

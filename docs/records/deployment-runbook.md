@@ -59,7 +59,7 @@ SPRING_PROFILES_ACTIVE=prod
 SPRING_DOCKER_COMPOSE_ENABLED=false
 ```
 
-`application-prod.yaml` 中 datasource 和端口不提供默认值，缺失时应启动失败。这样可以避免误用本地开发库或隐式端口。
+配置分层和环境变量命名规则统一沉淀到 [配置约定](../configuration.md)。`application.yaml` 中 datasource 保留注释示例，并提供默认端口 `8080`；`application-prod.yaml` 中 datasource 和端口不写环境变量占位符转发，也不提供 datasource 默认值。生产环境通过 Spring Boot 对 `SPRING_DATASOURCE_URL`、`SPRING_DATASOURCE_USERNAME`、`SPRING_DATASOURCE_PASSWORD` 和 `SERVER_PORT` 的自动绑定注入。datasource 缺失时应在 DataSource、Flyway 或 MyBatis 初始化阶段失败，避免误用本地开发库。
 
 ## 副作用开关
 
@@ -69,7 +69,8 @@ SPRING_DOCKER_COMPOSE_ENABLED=false
 SIGNAL_BRIEF_INGESTION_ENABLED=false
 SIGNAL_BRIEF_AI_SUMMARY_ENABLED=false
 SIGNAL_BRIEF_MAIL_ENABLED=false
-SIGNAL_BRIEF_OPENAPI_ENABLED=false
+SPRINGDOC_API_DOCS_ENABLED=false
+SPRINGDOC_SWAGGER_UI_ENABLED=false
 ```
 
 内部 API 可以在内网试运行时临时开启：
