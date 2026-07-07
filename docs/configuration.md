@@ -79,7 +79,7 @@
 | `signal-brief.ai-summary.api-key` | `SIGNAL_BRIEF_AI_SUMMARY_API_KEY` | 开启 AI 摘要后必填 |
 | `signal-brief.ai-summary.model` | `SIGNAL_BRIEF_AI_SUMMARY_MODEL` | 开启 AI 摘要后必填 |
 | `signal-brief.ai-summary.connect-timeout` | `SIGNAL_BRIEF_AI_SUMMARY_CONNECT_TIMEOUT` | 默认 `3s` |
-| `signal-brief.ai-summary.read-timeout` | `SIGNAL_BRIEF_AI_SUMMARY_READ_TIMEOUT` | 默认 `30s` |
+| `signal-brief.ai-summary.read-timeout` | `SIGNAL_BRIEF_AI_SUMMARY_READ_TIMEOUT` | 默认 `30s`；真实 Provider 试运行建议 `60s` |
 | `signal-brief.ai-summary.temperature` | `SIGNAL_BRIEF_AI_SUMMARY_TEMPERATURE` | 默认 `0.2` |
 | `signal-brief.ai-summary.max-output-tokens` | `SIGNAL_BRIEF_AI_SUMMARY_MAX_OUTPUT_TOKENS` | 默认 `2000` |
 | `signal-brief.mail.enabled` | `SIGNAL_BRIEF_MAIL_ENABLED` | 默认 `false` |

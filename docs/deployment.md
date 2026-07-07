@@ -169,7 +169,7 @@ spring:
   mail:
     host: smtp.example.com
     port: 587
-    username: replace-with-smtp-username
+    username: noreply@example.com
     password: replace-with-smtp-password
     properties:
       mail:
@@ -185,6 +185,8 @@ signal-brief:
     recipients: reader@example.com
     subject-prefix: SignalBrief 技术半月报
 ```
+
+个人邮箱或第一版试运行时，`spring.mail.username` 和 `signal-brief.mail.from` 建议使用同一个邮箱账号。只有当 SMTP 服务商明确支持已验证发件地址或域名代理发送时，才把两者配置为不同值。
 
 密码、主题、API key 等值如果包含 YAML 特殊字符，应使用引号包裹，并在首次启动前单独验证加载结果。
 
@@ -213,7 +215,7 @@ cd /opt/signal-brief
 docker compose logs -f postgres
 ```
 
-应用的 JDBC URL 使用 `localhost:5432`，因此 PostgreSQL 容器需要按 `compose.yaml` 映射到宿主机端口。
+应用的 JDBC URL 使用 `localhost:5432`，因此 PostgreSQL 容器需要按 `compose.yaml` 映射到宿主机本机回环地址。不要把数据库端口绑定到 `0.0.0.0` 或直接暴露到公网。
 
 ## 应用构建与发布
 
@@ -380,10 +382,7 @@ signal-brief:
 
 ```bash
 cd /opt/signal-brief
-set -a
-. /opt/signal-brief/.env
-set +a
-docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" > "/opt/signal-brief/backup/signal-brief-$(date +%Y%m%d%H%M%S).sql"
+docker compose exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > "/opt/signal-brief/backup/signal-brief-$(date +%Y%m%d%H%M%S).sql"
 ```
 
 恢复前先停止应用，避免恢复过程中继续写入：
@@ -396,10 +395,7 @@ sudo systemctl stop signal-brief
 
 ```bash
 cd /opt/signal-brief
-set -a
-. /opt/signal-brief/.env
-set +a
-docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < /opt/signal-brief/backup/backup-file.sql
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < /opt/signal-brief/backup/backup-file.sql
 ```
 
 恢复完成后再启动应用：
@@ -436,6 +432,7 @@ sudo systemctl start signal-brief
 - 不要提交服务器上的 `.env` 和 `config/application-prod.yaml`。
 - 不要把内部 API 直接暴露到公网。
 - 阿里云安全组默认只开放 SSH；如需开放应用端口，必须先确认内部 API 和 OpenAPI 都处于关闭状态。
+- PostgreSQL 端口只绑定 `127.0.0.1`，不要向公网或内网直接开放数据库。
 - OpenAPI / Swagger UI 默认关闭，只在可信网络内临时开启。
 - 数据库、SMTP 和 AI Provider 密钥只放部署环境。
 - 日志中不要输出完整密钥、密码或授权头。

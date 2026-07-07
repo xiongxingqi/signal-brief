@@ -57,7 +57,7 @@ cp .env.example .env
 docker compose up -d postgres
 ```
 
-默认会把 PostgreSQL 映射到宿主机 `5432` 端口；如需改端口，在 `.env` 中设置 `POSTGRES_PORT`，并同步调整 `SPRING_DATASOURCE_URL`。
+默认只把 PostgreSQL 映射到宿主机 `127.0.0.1:5432`；如需改端口，在 `.env` 中设置 `POSTGRES_PORT`，并同步调整 `SPRING_DATASOURCE_URL`。
 
 启动应用：
 
