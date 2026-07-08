@@ -33,6 +33,7 @@ public interface ArticleQueryMapper {
                 guid,
                 published_at AS "publishedAt",
                 summary,
+                content_text AS "contentText",
                 content_hash AS "contentHash",
                 created_at AS "createdAt",
                 updated_at AS "updatedAt"
@@ -51,6 +52,7 @@ public interface ArticleQueryMapper {
             @Arg(column = "guid", javaType = String.class),
             @Arg(column = "publishedAt", javaType = Instant.class),
             @Arg(column = "summary", javaType = String.class),
+            @Arg(column = "contentText", javaType = String.class),
             @Arg(column = "contentHash", javaType = String.class),
             @Arg(column = "createdAt", javaType = Instant.class),
             @Arg(column = "updatedAt", javaType = Instant.class)

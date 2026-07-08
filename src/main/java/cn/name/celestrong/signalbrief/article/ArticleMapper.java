@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 /**
  * 文章写入与去重查询 Mapper。
@@ -28,6 +29,7 @@ public interface ArticleMapper {
                 guid,
                 published_at,
                 summary,
+                content_text,
                 content_hash
             ) VALUES (
                 #{sourceName},
@@ -38,6 +40,7 @@ public interface ArticleMapper {
                 #{guid},
                 #{publishedAt},
                 #{summary},
+                #{contentText},
                 #{contentHash}
             )
             ON CONFLICT DO NOTHING
@@ -68,4 +71,120 @@ public interface ArticleMapper {
             )
             """)
     boolean existsByContentHash(@Param("contentHash") String contentHash);
+
+    /**
+     * 兼容历史数据：只补齐空摘要或空正文，不覆盖已有内容。
+     */
+    @Update("""
+            UPDATE article
+            SET
+                summary = CASE
+                    WHEN (summary IS NULL OR btrim(summary) = '')
+                         AND #{summary} IS NOT NULL
+                         AND btrim(#{summary}) <> ''
+                    THEN #{summary}
+                    ELSE summary
+                END,
+                content_text = CASE
+                    WHEN (content_text IS NULL OR btrim(content_text) = '')
+                         AND #{contentText} IS NOT NULL
+                         AND btrim(#{contentText}) <> ''
+                    THEN #{contentText}
+                    ELSE content_text
+                END,
+                updated_at = now()
+            WHERE source_name = #{sourceName}
+              AND guid = #{guid}
+              AND (
+                  ((summary IS NULL OR btrim(summary) = '')
+                   AND #{summary} IS NOT NULL
+                   AND btrim(#{summary}) <> '')
+                  OR
+                  ((content_text IS NULL OR btrim(content_text) = '')
+                   AND #{contentText} IS NOT NULL
+                   AND btrim(#{contentText}) <> '')
+              )
+            """)
+    int fillMissingContentBySourceNameAndGuid(
+            @Param("sourceName") String sourceName,
+            @Param("guid") String guid,
+            @Param("summary") String summary,
+            @Param("contentText") String contentText
+    );
+
+    /**
+     * 兼容历史数据：URL 唯一索引命中时补齐缺失内容。
+     */
+    @Update("""
+            UPDATE article
+            SET
+                summary = CASE
+                    WHEN (summary IS NULL OR btrim(summary) = '')
+                         AND #{summary} IS NOT NULL
+                         AND btrim(#{summary}) <> ''
+                    THEN #{summary}
+                    ELSE summary
+                END,
+                content_text = CASE
+                    WHEN (content_text IS NULL OR btrim(content_text) = '')
+                         AND #{contentText} IS NOT NULL
+                         AND btrim(#{contentText}) <> ''
+                    THEN #{contentText}
+                    ELSE content_text
+                END,
+                updated_at = now()
+            WHERE url = #{url}
+              AND (
+                  ((summary IS NULL OR btrim(summary) = '')
+                   AND #{summary} IS NOT NULL
+                   AND btrim(#{summary}) <> '')
+                  OR
+                  ((content_text IS NULL OR btrim(content_text) = '')
+                   AND #{contentText} IS NOT NULL
+                   AND btrim(#{contentText}) <> '')
+              )
+            """)
+    int fillMissingContentByUrl(
+            @Param("url") String url,
+            @Param("summary") String summary,
+            @Param("contentText") String contentText
+    );
+
+    /**
+     * 兼容历史数据：缺少 guid 和 URL 时用内容哈希补齐缺失内容。
+     */
+    @Update("""
+            UPDATE article
+            SET
+                summary = CASE
+                    WHEN (summary IS NULL OR btrim(summary) = '')
+                         AND #{summary} IS NOT NULL
+                         AND btrim(#{summary}) <> ''
+                    THEN #{summary}
+                    ELSE summary
+                END,
+                content_text = CASE
+                    WHEN (content_text IS NULL OR btrim(content_text) = '')
+                         AND #{contentText} IS NOT NULL
+                         AND btrim(#{contentText}) <> ''
+                    THEN #{contentText}
+                    ELSE content_text
+                END,
+                updated_at = now()
+            WHERE content_hash = #{contentHash}
+              AND (
+                  ((summary IS NULL OR btrim(summary) = '')
+                   AND #{summary} IS NOT NULL
+                   AND btrim(#{summary}) <> '')
+                  OR
+                  ((content_text IS NULL OR btrim(content_text) = '')
+                   AND #{contentText} IS NOT NULL
+                   AND btrim(#{contentText}) <> '')
+              )
+            """)
+    int fillMissingContentByContentHash(
+            @Param("contentHash") String contentHash,
+            @Param("summary") String summary,
+            @Param("contentText") String contentText
+    );
 }

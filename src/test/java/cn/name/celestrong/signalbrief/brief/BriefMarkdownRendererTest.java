@@ -167,6 +167,7 @@ class BriefMarkdownRendererTest {
                 "guid",
                 publishedAt,
                 summary,
+                null,
                 "hash",
                 Instant.parse("2026-07-04T00:00:00Z"),
                 Instant.parse("2026-07-04T00:00:00Z")

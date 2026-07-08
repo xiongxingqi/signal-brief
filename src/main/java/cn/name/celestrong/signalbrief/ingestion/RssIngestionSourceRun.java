@@ -5,6 +5,9 @@ import cn.name.celestrong.signalbrief.feed.FeedFetchFailureType;
 
 import java.time.Instant;
 
+/**
+ * 单个 RSS 源在一次入库批次中的运行记录。
+ */
 public record RssIngestionSourceRun(
         Long id,
         Long runId,

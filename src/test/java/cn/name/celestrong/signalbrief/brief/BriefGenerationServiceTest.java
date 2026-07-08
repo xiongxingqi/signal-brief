@@ -44,6 +44,7 @@ class BriefGenerationServiceTest {
                 "guid",
                 Instant.parse("2026-07-02T09:15:30Z"),
                 "新版本发布摘要。",
+                null,
                 "hash",
                 Instant.parse("2026-07-04T00:00:00Z"),
                 Instant.parse("2026-07-04T00:00:00Z")

@@ -71,7 +71,8 @@ class ArticleDeduplicationServiceTest {
                 url,
                 guid,
                 Instant.parse("2026-07-03T00:00:00Z"),
-                "Summary"
+                "Summary",
+                null
         );
     }
 
@@ -104,6 +105,26 @@ class ArticleDeduplicationServiceTest {
         public boolean existsByContentHash(String contentHash) {
             hashChecks++;
             return existsByContentHash;
+        }
+
+        @Override
+        public int fillMissingContentBySourceNameAndGuid(
+                String sourceName,
+                String guid,
+                String summary,
+                String contentText
+        ) {
+            return 0;
+        }
+
+        @Override
+        public int fillMissingContentByUrl(String url, String summary, String contentText) {
+            return 0;
+        }
+
+        @Override
+        public int fillMissingContentByContentHash(String contentHash, String summary, String contentText) {
+            return 0;
         }
     }
 }

@@ -3,6 +3,7 @@ package cn.name.celestrong.signalbrief.article;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.time.Instant;
@@ -21,6 +22,9 @@ class ArticleMapperIT {
     @Autowired
     private ArticleMapper articleMapper;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @Test
     void insertsAndFindsArticleByUrl() {
         NewArticle article = sampleArticle("mapper-url-1", "https://example.com/article-1", "hash-001");
@@ -29,6 +33,12 @@ class ArticleMapperIT {
 
         assertEquals(1, insertedRows);
         assertTrue(articleMapper.existsByUrl("https://example.com/article-1"));
+        String contentText = jdbcTemplate.queryForObject(
+                "SELECT content_text FROM article WHERE url = ?",
+                String.class,
+                "https://example.com/article-1"
+        );
+        assertEquals("Body text mapper-url-1", contentText);
     }
 
     @Test
@@ -58,6 +68,67 @@ class ArticleMapperIT {
         assertEquals(0, articleMapper.insertIfAbsent(duplicateHash));
     }
 
+    @Test
+    void fillsOnlyMissingSummaryAndContentTextForDuplicateGuid() {
+        NewArticle first = new NewArticle(
+                "Test Source",
+                "https://example.com/feed.xml",
+                ArticleCategory.JAVA,
+                "Test Article missing-content",
+                "https://example.com/missing-content",
+                "missing-content-guid",
+                Instant.parse("2026-07-03T00:00:00Z"),
+                null,
+                null,
+                "hash-missing-content"
+        );
+        assertEquals(1, articleMapper.insertIfAbsent(first));
+
+        int updatedRows = articleMapper.fillMissingContentBySourceNameAndGuid(
+                "Test Source",
+                "missing-content-guid",
+                "Filled summary",
+                "Filled content"
+        );
+
+        assertEquals(1, updatedRows);
+        assertEquals("Filled summary", jdbcTemplate.queryForObject(
+                "SELECT summary FROM article WHERE guid = ?",
+                String.class,
+                "missing-content-guid"
+        ));
+        assertEquals("Filled content", jdbcTemplate.queryForObject(
+                "SELECT content_text FROM article WHERE guid = ?",
+                String.class,
+                "missing-content-guid"
+        ));
+    }
+
+    @Test
+    void doesNotOverwriteExistingSummaryOrContentText() {
+        NewArticle first = sampleArticle("existing-content", "https://example.com/existing-content", "hash-existing-content");
+        assertEquals(1, articleMapper.insertIfAbsent(first));
+
+        int updatedRows = articleMapper.fillMissingContentBySourceNameAndGuid(
+                "Test Source",
+                "existing-content",
+                "Replacement summary",
+                "Replacement content"
+        );
+
+        assertEquals(0, updatedRows);
+        assertEquals("Summary", jdbcTemplate.queryForObject(
+                "SELECT summary FROM article WHERE guid = ?",
+                String.class,
+                "existing-content"
+        ));
+        assertEquals("Body text existing-content", jdbcTemplate.queryForObject(
+                "SELECT content_text FROM article WHERE guid = ?",
+                String.class,
+                "existing-content"
+        ));
+    }
+
     private NewArticle sampleArticle(String guid, String url, String contentHash) {
         return new NewArticle(
                 "Test Source",
@@ -68,6 +139,7 @@ class ArticleMapperIT {
                 guid,
                 Instant.parse("2026-07-03T00:00:00Z"),
                 "Summary",
+                "Body text " + guid,
                 contentHash
         );
     }

@@ -40,6 +40,10 @@ Git 提交规范以 [docs/git-commit-convention.md](docs/git-commit-convention.m
 
 代理协作时不要主动提交代码；只有用户明确要求“提交”时才执行 `git add` 和 `git commit`。提交前必须重新运行与改动范围匹配的验证命令，并在回复中说明实际执行结果。遇到用户未提交的改动，必须保留并基于现状继续工作，不要擅自回滚。
 
+## 代理技能使用约定
+
+代理在进入具体工作前，先检查当前环境可用的技能，并按任务类型使用匹配的技能。需要使用技能时，在回复或阶段性更新中简短说明；不需要为明显无关的技能逐一解释。
+
 ## 安全与配置
 
 配置约定统一见 [docs/configuration.md](docs/configuration.md)。不要提交真实密钥；本地凭据放在 `.env`，共享示例放在 `.env.example`。datasource、SMTP、AI provider 等敏感配置通过环境变量注入。

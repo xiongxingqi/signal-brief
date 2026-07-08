@@ -105,6 +105,9 @@ public interface BriefMailDeliveryMapper {
     })
     Optional<BriefMailDelivery> findById(@Param("id") Long id);
 
+    /**
+     * 查询某个简报归档下的全部投递记录。
+     */
     @Select("""
             SELECT
                 id,

@@ -46,6 +46,9 @@ public interface RssIngestionRunMapper {
             @Param("sourceCount") int sourceCount
     );
 
+    /**
+     * 写入单个源执行明细，成功和失败共用同一张审计表。
+     */
     @Insert("""
             INSERT INTO rss_ingestion_source_run (
                 run_id,
@@ -85,6 +88,9 @@ public interface RssIngestionRunMapper {
             """)
     int insertSourceRun(NewRssIngestionSourceRun sourceRun);
 
+    /**
+     * 结束批次并写入汇总计数。
+     */
     @Update("""
             UPDATE rss_ingestion_run
             SET status = #{status},
@@ -108,6 +114,9 @@ public interface RssIngestionRunMapper {
             @Param("failedSourceCount") int failedSourceCount
     );
 
+    /**
+     * 按 ID 查询批次汇总。
+     */
     @Select("""
             SELECT
                 id,
@@ -143,6 +152,9 @@ public interface RssIngestionRunMapper {
     })
     Optional<RssIngestionRun> findRunById(@Param("runId") Long runId);
 
+    /**
+     * 查询最近批次汇总，供内部运维接口展示。
+     */
     @Select("""
             SELECT
                 id,
@@ -179,6 +191,9 @@ public interface RssIngestionRunMapper {
     })
     List<RssIngestionRun> findRecentRuns(@Param("limit") int limit);
 
+    /**
+     * 查询批次下所有源级明细，按写入顺序稳定返回。
+     */
     @Select("""
             SELECT
                 id,

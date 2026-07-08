@@ -2,6 +2,7 @@ package cn.name.celestrong.signalbrief.feed;
 
 import cn.name.celestrong.signalbrief.article.ArticleCategory;
 import cn.name.celestrong.signalbrief.config.FeedProperties;
+import cn.name.celestrong.signalbrief.content.HtmlContentCleaner;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -17,7 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 class RomeFeedParserTest {
 
-    private final RomeFeedParser parser = new RomeFeedParser();
+    private final RomeFeedParser parser = new RomeFeedParser(
+            new FeedEntryContentExtractor(new HtmlContentCleaner())
+    );
 
     @Test
     void parsesRssItem() throws Exception {
@@ -62,6 +65,51 @@ class RomeFeedParserTest {
             assertEquals(Instant.parse("2026-07-02T08:30:00Z"), article.publishedAt());
             assertNotNull(article.summary());
         }
+    }
+
+    @Test
+    void parsesAtomSummaryAndContentSeparately() throws Exception {
+        FeedProperties.FeedSource source = source("Atom Feed");
+
+        try (InputStream inputStream = fixture("fixtures/rss/atom-content.xml")) {
+            FetchedArticle article = parser.parse(source, inputStream).getFirst();
+
+            assertEquals("Short atom summary.", article.summary());
+            assertEquals("Full atom content body.", article.contentText());
+        }
+    }
+
+    @Test
+    void parsesRssContentEncodedAsContentText() throws Exception {
+        FeedProperties.FeedSource source = source("RSS Feed");
+
+        try (InputStream inputStream = fixture("fixtures/rss/rss-content-encoded.xml")) {
+            FetchedArticle article = parser.parse(source, inputStream).getFirst();
+
+            assertEquals("Short rss description.", article.summary());
+            assertEquals("Full rss content body.", article.contentText());
+        }
+    }
+
+    @Test
+    void usesContentAsSummaryFallbackWhenDescriptionIsMissing() throws Exception {
+        FeedProperties.FeedSource source = source("HTML Feed");
+
+        try (InputStream inputStream = fixture("fixtures/rss/html-content.xml")) {
+            FetchedArticle article = parser.parse(source, inputStream).getFirst();
+
+            assertEquals("Only content fallback.", article.summary());
+            assertEquals("Only content fallback.", article.contentText());
+        }
+    }
+
+    private FeedProperties.FeedSource source(String name) {
+        return new FeedProperties.FeedSource(
+                name,
+                URI.create("https://example.com/feed.xml"),
+                ArticleCategory.JAVA,
+                true
+        );
     }
 
     private InputStream fixture(String path) {

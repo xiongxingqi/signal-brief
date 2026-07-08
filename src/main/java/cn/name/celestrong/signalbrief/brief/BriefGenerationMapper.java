@@ -111,6 +111,9 @@ public interface BriefGenerationMapper {
     })
     Optional<BriefGeneration> findById(@Param("id") Long id);
 
+    /**
+     * 查询最近归档记录，供内部运维接口展示。
+     */
     @Select("""
             SELECT
                 id,

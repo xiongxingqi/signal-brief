@@ -7,6 +7,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 简报邮件投递记录查询服务。
+ *
+ * <p>先校验归档是否存在，再返回投递列表，避免空列表同时表示“未发送”和“归档不存在”。</p>
+ */
 @Service
 public class BriefMailDeliveryQueryService {
 
@@ -21,6 +26,9 @@ public class BriefMailDeliveryQueryService {
         this.deliveryMapper = deliveryMapper;
     }
 
+    /**
+     * 查询指定简报归档的所有邮件投递记录。
+     */
     public List<BriefMailDelivery> findDeliveries(Long briefGenerationId) {
         briefGenerationMapper.findById(briefGenerationId)
                 .orElseThrow(() -> new BriefGenerationNotFoundException(

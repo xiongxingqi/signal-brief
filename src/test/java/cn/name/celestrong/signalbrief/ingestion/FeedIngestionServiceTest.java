@@ -219,7 +219,8 @@ class FeedIngestionServiceTest {
                     "https://example.com/" + guid,
                     guid,
                     Instant.parse("2026-07-03T00:00:00Z"),
-                    "Summary"
+                    "Summary",
+                    null
             );
         }
     }

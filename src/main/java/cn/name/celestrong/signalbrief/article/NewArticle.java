@@ -16,6 +16,7 @@ public record NewArticle(
         String guid,
         Instant publishedAt,
         String summary,
+        String contentText,
         String contentHash
 ) {
     public NewArticle {

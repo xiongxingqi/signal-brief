@@ -17,6 +17,7 @@ public record Article(
         String guid,
         Instant publishedAt,
         String summary,
+        String contentText,
         String contentHash,
         Instant createdAt,
         Instant updatedAt

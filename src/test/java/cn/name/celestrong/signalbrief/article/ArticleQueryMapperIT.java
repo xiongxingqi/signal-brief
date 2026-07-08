@@ -50,6 +50,7 @@ class ArticleQueryMapperIT {
 
         assertEquals(1, articles.size());
         assertEquals("Test Article inside-window", articles.getFirst().title());
+        assertEquals("Body text inside-window", articles.getFirst().contentText());
     }
 
     @Test
@@ -127,6 +128,7 @@ class ArticleQueryMapperIT {
                 guid,
                 publishedAt,
                 "Summary",
+                "Body text " + guid,
                 contentHash
         );
     }

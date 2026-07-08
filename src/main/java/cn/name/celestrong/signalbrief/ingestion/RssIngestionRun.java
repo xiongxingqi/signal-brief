@@ -2,6 +2,9 @@ package cn.name.celestrong.signalbrief.ingestion;
 
 import java.time.Instant;
 
+/**
+ * RSS 入库批次记录。
+ */
 public record RssIngestionRun(
         Long id,
         IngestionTriggerType triggerType,

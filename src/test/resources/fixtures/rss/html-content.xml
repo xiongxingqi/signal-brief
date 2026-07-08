@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>HTML Feed</title>
+  <entry>
+    <id>html-content-1</id>
+    <title>HTML content article</title>
+    <link href="https://example.com/html-content-1"/>
+    <updated>2026-07-07T10:00:00Z</updated>
+    <content type="html">&lt;script&gt;bad()&lt;/script&gt;&lt;p&gt;Only content fallback.&lt;/p&gt;</content>
+  </entry>
+</feed>

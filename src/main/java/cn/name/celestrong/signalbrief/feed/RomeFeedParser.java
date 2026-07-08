@@ -20,6 +20,12 @@ import java.util.List;
 @Component
 public class RomeFeedParser implements FeedParser {
 
+    private final FeedEntryContentExtractor contentExtractor;
+
+    public RomeFeedParser(FeedEntryContentExtractor contentExtractor) {
+        this.contentExtractor = contentExtractor;
+    }
+
     @Override
     public List<FetchedArticle> parse(FeedProperties.FeedSource source, InputStream inputStream) {
         try {
@@ -34,6 +40,7 @@ public class RomeFeedParser implements FeedParser {
     }
 
     private FetchedArticle toFetchedArticle(FeedProperties.FeedSource source, SyndEntry entry) {
+        ExtractedFeedContent content = contentExtractor.extract(entry);
         return new FetchedArticle(
                 source.name(),
                 source.url(),
@@ -42,7 +49,8 @@ public class RomeFeedParser implements FeedParser {
                 clean(entry.getLink()),
                 clean(entry.getUri()),
                 toInstant(entry.getPublishedDate(), entry.getUpdatedDate()),
-                entry.getDescription() == null ? null : clean(entry.getDescription().getValue())
+                content.summaryText(),
+                content.contentText()
         );
     }
 

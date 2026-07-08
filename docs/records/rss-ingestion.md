@@ -1,12 +1,12 @@
 # RSS 抓取入库记录
 
-> 本文档记录 RSS 抓取、解析、去重、入库和查询出口的当前设计。源清单与 HTTP 抓取可靠性细节见 [RSS 源清单与抓取可靠性记录](rss-source-reliability.md)，运行记录细节见 [RSS 入库运行记录](rss-ingestion-run-record.md)。实现细节以源码、迁移脚本和测试为准。
+> 本文档记录 RSS 抓取、解析、去重、入库和查询出口的当前设计。内容提取细节见 [RSS / Atom 内容提取增强记录](rss-atom-content-extraction.md)，源清单与 HTTP 抓取可靠性细节见 [RSS 源清单与抓取可靠性记录](rss-source-reliability.md)，运行记录细节见 [RSS 入库运行记录](rss-ingestion-run-record.md)。实现细节以源码、迁移脚本和测试为准。
 
 ## 定位
 
 RSS 入库是 SignalBrief 的第一段核心链路，目标是把外部 RSS / Atom 源转换成可供后续 AI 摘要、Markdown 简报和邮件推送使用的本地文章数据。
 
-当前已经覆盖：真实配置源读取、HTTP 抓取超时、有限重试、失败分类、RSS / Atom 解析、文章去重、PostgreSQL 入库、定时触发、手动触发、批次统计、RSS 入库运行与源级明细记录、简报候选查询。
+当前已经覆盖：真实配置源读取、HTTP 抓取超时、有限重试、失败分类、RSS / Atom 解析、短摘要与正文片段提取、HTML 清洗、文章去重、PostgreSQL 入库、定时触发、手动触发、批次统计、RSS 入库运行与源级明细记录、简报候选查询。
 
 当前暂不覆盖：RSS 源数据库管理、失败告警、AI 摘要和邮件发送。
 
@@ -16,12 +16,14 @@ RSS 入库是 SignalBrief 的第一段核心链路，目标是把外部 RSS / At
 - `config/FeedHttpProperties`：绑定 feed 抓取客户端的 User-Agent、超时和重试配置。
 - `config/FeedHttpConfiguration`：装配 feed 专用 `RestClient`，底层使用 Apache HttpClient 5。
 - `config/IngestionProperties`：绑定 `signal-brief.ingestion` 的开关和 cron。
+- `content/HtmlContentCleaner`：通用 HTML 片段清洗组件，将 feed 或后续网页正文中的 HTML 转为纯文本。
 - `feed/FeedClient`：定义 feed 获取边界，返回 `InputStream`。
 - `feed/HttpFeedClient`：使用 feed 专用 Spring `RestClient` 抓取 feed，非 2xx 响应和客户端 I/O 异常包装为 `FeedFetchException`。
+- `feed/FeedEntryContentExtractor`：从 ROME `SyndEntry` 中选择短摘要和正文候选字段，支持 RSS `description`、Atom `summary` / `content` 和 RSS `content:encoded`。
 - `feed/RomeFeedParser`：使用 ROME 和 `XmlReader` 解析 RSS / Atom，保留 XML 自身编码识别能力。
 - `article/ArticleDeduplicationService`：按 guid、url、contentHash 顺序判断重复。
 - `article/ArticleIngestionService`：把 `FetchedArticle` 转为 `NewArticle` 并写库。
-- `article/ArticleMapper`：负责文章写入和去重查询。
+- `article/ArticleMapper`：负责文章写入、重复文章空字段补齐和去重查询。
 - `article/ArticleQueryService`：提供后续简报候选文章查询。
 - `ingestion/FeedIngestionService`：编排多源入库，单源失败隔离。
 - `ingestion/IngestionRunRecorder`：持久化 RSS 入库运行记录和源级执行明细。
@@ -90,7 +92,9 @@ OpenAPI 文档由 `SPRINGDOC_API_DOCS_ENABLED` 和 `SPRINGDOC_SWAGGER_UI_ENABLED
 
 ## 数据与去重
 
-文章表由 `src/main/resources/db/migration/V1__create_article_table.sql` 创建，核心字段包括来源、分类、标题、文章 URL、guid、发布时间、摘要、内容哈希和创建更新时间。
+文章表由 `src/main/resources/db/migration/V1__create_article_table.sql` 创建，核心字段包括来源、分类、标题、文章 URL、guid、发布时间、摘要、正文片段、内容哈希和创建更新时间。
+
+文章表新增 `content_text`，用于保存 RSS / Atom 正文片段清洗后的纯文本。`summary` 继续表示短摘要，`content_text` 表示正文上下文；旧数据允许为空。
 
 RSS 入库运行记录由 `rss_ingestion_run` 和 `rss_ingestion_source_run` 保存。运行级记录包含触发方式、状态、开始结束时间、耗时、源数量和抓取/入库/跳过/失败统计；源级记录包含源名称、URL、分类、状态、抓取/入库/跳过统计和失败诊断字段。源级失败明细包含失败类型、HTTP 状态、尝试次数、最大尝试次数和错误摘要（`error_message`）。
 
@@ -124,7 +128,7 @@ CI 运行完整验证：
 ./mvnw -B verify
 ```
 
-当前测试覆盖配置绑定、RSS / Atom fixture 解析、HTTP 抓取异常、去重、入库编排、运行记录持久化与查询、定时开关、手动触发接口、查询窗口和 MyBatis 数据库行为。数据库集成测试依赖 CI 中独立 PostgreSQL service。
+当前测试覆盖配置绑定、RSS / Atom fixture 解析、HTML 清洗、正文片段提取、HTTP 抓取异常、去重、入库编排、运行记录持久化与查询、定时开关、手动触发接口、查询窗口和 MyBatis 数据库行为。数据库集成测试依赖 CI 中独立 PostgreSQL service。
 
 ## 维护约束
 
@@ -133,10 +137,11 @@ CI 运行完整验证：
 - `httpclient5`、Spring 生态依赖不要在 `pom.xml` 重复声明版本，除非 Spring Boot 不管理该依赖。
 - 新增文章字段时同步更新 record、Mapper、迁移脚本和测试。
 - 调整去重规则时同步考虑应用层判断、数据库唯一索引和历史数据兼容。
+- 重复文章重新抓取时，只补齐为空的 `summary` / `content_text`，不要覆盖已有非空内容。
+- `content_text` 不参与现有 `content_hash`，避免改变历史去重口径。
 - 新增真实源时必须优先使用官方或一手 RSS / Atom 地址，并通过官方页面或实际 HTTP 响应校验。
 
 ## 下一步
 
 - 增加连续失败告警和运行记录保留清理策略。
-- 对摘要字段做 HTML 清理和长度控制。
-- 基于查询出口实现 AI 摘要、Markdown 简报和邮件推送。
+- 将 `content_text` 纳入后续 AI 摘要输入增强，并保留摘要展示的稳定降级路径。

@@ -18,6 +18,7 @@ public record FetchedArticle(
         String url,
         String guid,
         Instant publishedAt,
-        String summary
+        String summary,
+        String contentText
 ) {
 }
