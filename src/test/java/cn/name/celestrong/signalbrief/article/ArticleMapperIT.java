@@ -9,6 +9,7 @@ import org.springframework.test.context.jdbc.Sql;
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -101,6 +102,42 @@ class ArticleMapperIT {
                 "SELECT content_text FROM article WHERE guid = ?",
                 String.class,
                 "missing-content-guid"
+        ));
+    }
+
+    @Test
+    void fillsOnlySummaryWhenDuplicateContentTextIsNull() {
+        NewArticle first = new NewArticle(
+                "Test Source",
+                "https://example.com/feed.xml",
+                ArticleCategory.JAVA,
+                "Test Article summary-only",
+                "https://example.com/summary-only",
+                "summary-only-guid",
+                Instant.parse("2026-07-03T00:00:00Z"),
+                null,
+                null,
+                "hash-summary-only"
+        );
+        assertEquals(1, articleMapper.insertIfAbsent(first));
+
+        int updatedRows = articleMapper.fillMissingContentBySourceNameAndGuid(
+                "Test Source",
+                "summary-only-guid",
+                "Filled summary",
+                null
+        );
+
+        assertEquals(1, updatedRows);
+        assertEquals("Filled summary", jdbcTemplate.queryForObject(
+                "SELECT summary FROM article WHERE guid = ?",
+                String.class,
+                "summary-only-guid"
+        ));
+        assertNull(jdbcTemplate.queryForObject(
+                "SELECT content_text FROM article WHERE guid = ?",
+                String.class,
+                "summary-only-guid"
         ));
     }
 

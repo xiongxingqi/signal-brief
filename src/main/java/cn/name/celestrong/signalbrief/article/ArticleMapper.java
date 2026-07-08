@@ -80,16 +80,16 @@ public interface ArticleMapper {
             SET
                 summary = CASE
                     WHEN (summary IS NULL OR btrim(summary) = '')
-                         AND #{summary} IS NOT NULL
-                         AND btrim(#{summary}) <> ''
-                    THEN #{summary}
+                         AND #{summary,jdbcType=VARCHAR} IS NOT NULL
+                         AND btrim(#{summary,jdbcType=VARCHAR}) <> ''
+                    THEN #{summary,jdbcType=VARCHAR}
                     ELSE summary
                 END,
                 content_text = CASE
                     WHEN (content_text IS NULL OR btrim(content_text) = '')
-                         AND #{contentText} IS NOT NULL
-                         AND btrim(#{contentText}) <> ''
-                    THEN #{contentText}
+                         AND #{contentText,jdbcType=VARCHAR} IS NOT NULL
+                         AND btrim(#{contentText,jdbcType=VARCHAR}) <> ''
+                    THEN #{contentText,jdbcType=VARCHAR}
                     ELSE content_text
                 END,
                 updated_at = now()
@@ -97,12 +97,12 @@ public interface ArticleMapper {
               AND guid = #{guid}
               AND (
                   ((summary IS NULL OR btrim(summary) = '')
-                   AND #{summary} IS NOT NULL
-                   AND btrim(#{summary}) <> '')
+                   AND #{summary,jdbcType=VARCHAR} IS NOT NULL
+                   AND btrim(#{summary,jdbcType=VARCHAR}) <> '')
                   OR
                   ((content_text IS NULL OR btrim(content_text) = '')
-                   AND #{contentText} IS NOT NULL
-                   AND btrim(#{contentText}) <> '')
+                   AND #{contentText,jdbcType=VARCHAR} IS NOT NULL
+                   AND btrim(#{contentText,jdbcType=VARCHAR}) <> '')
               )
             """)
     int fillMissingContentBySourceNameAndGuid(
@@ -120,28 +120,28 @@ public interface ArticleMapper {
             SET
                 summary = CASE
                     WHEN (summary IS NULL OR btrim(summary) = '')
-                         AND #{summary} IS NOT NULL
-                         AND btrim(#{summary}) <> ''
-                    THEN #{summary}
+                         AND #{summary,jdbcType=VARCHAR} IS NOT NULL
+                         AND btrim(#{summary,jdbcType=VARCHAR}) <> ''
+                    THEN #{summary,jdbcType=VARCHAR}
                     ELSE summary
                 END,
                 content_text = CASE
                     WHEN (content_text IS NULL OR btrim(content_text) = '')
-                         AND #{contentText} IS NOT NULL
-                         AND btrim(#{contentText}) <> ''
-                    THEN #{contentText}
+                         AND #{contentText,jdbcType=VARCHAR} IS NOT NULL
+                         AND btrim(#{contentText,jdbcType=VARCHAR}) <> ''
+                    THEN #{contentText,jdbcType=VARCHAR}
                     ELSE content_text
                 END,
                 updated_at = now()
             WHERE url = #{url}
               AND (
                   ((summary IS NULL OR btrim(summary) = '')
-                   AND #{summary} IS NOT NULL
-                   AND btrim(#{summary}) <> '')
+                   AND #{summary,jdbcType=VARCHAR} IS NOT NULL
+                   AND btrim(#{summary,jdbcType=VARCHAR}) <> '')
                   OR
                   ((content_text IS NULL OR btrim(content_text) = '')
-                   AND #{contentText} IS NOT NULL
-                   AND btrim(#{contentText}) <> '')
+                   AND #{contentText,jdbcType=VARCHAR} IS NOT NULL
+                   AND btrim(#{contentText,jdbcType=VARCHAR}) <> '')
               )
             """)
     int fillMissingContentByUrl(
@@ -158,28 +158,28 @@ public interface ArticleMapper {
             SET
                 summary = CASE
                     WHEN (summary IS NULL OR btrim(summary) = '')
-                         AND #{summary} IS NOT NULL
-                         AND btrim(#{summary}) <> ''
-                    THEN #{summary}
+                         AND #{summary,jdbcType=VARCHAR} IS NOT NULL
+                         AND btrim(#{summary,jdbcType=VARCHAR}) <> ''
+                    THEN #{summary,jdbcType=VARCHAR}
                     ELSE summary
                 END,
                 content_text = CASE
                     WHEN (content_text IS NULL OR btrim(content_text) = '')
-                         AND #{contentText} IS NOT NULL
-                         AND btrim(#{contentText}) <> ''
-                    THEN #{contentText}
+                         AND #{contentText,jdbcType=VARCHAR} IS NOT NULL
+                         AND btrim(#{contentText,jdbcType=VARCHAR}) <> ''
+                    THEN #{contentText,jdbcType=VARCHAR}
                     ELSE content_text
                 END,
                 updated_at = now()
             WHERE content_hash = #{contentHash}
               AND (
                   ((summary IS NULL OR btrim(summary) = '')
-                   AND #{summary} IS NOT NULL
-                   AND btrim(#{summary}) <> '')
+                   AND #{summary,jdbcType=VARCHAR} IS NOT NULL
+                   AND btrim(#{summary,jdbcType=VARCHAR}) <> '')
                   OR
                   ((content_text IS NULL OR btrim(content_text) = '')
-                   AND #{contentText} IS NOT NULL
-                   AND btrim(#{contentText}) <> '')
+                   AND #{contentText,jdbcType=VARCHAR} IS NOT NULL
+                   AND btrim(#{contentText,jdbcType=VARCHAR}) <> '')
               )
             """)
     int fillMissingContentByContentHash(
