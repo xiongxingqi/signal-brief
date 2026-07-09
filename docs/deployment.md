@@ -40,16 +40,16 @@ ssh -F ~/.ssh/config aliyun 'free -h'
 ssh -F ~/.ssh/config aliyun 'ss -lntp'
 ```
 
-2026-07-07 对 `aliyun` 的盘点结论：
+2026-07-07 首次部署前对 `aliyun` 的盘点结论：
 
 - 系统为 Ubuntu 26.04 LTS，`systemd` 可用。
 - 登录用户为 `celestrong`，具备 `sudo` 组权限。
-- 当前未安装 Docker 和 Java。
+- 当时尚未安装 Docker 和 Java；首次试运行已完成安装。新机器部署时仍需按上面的检查命令确认。
 - 根分区约 35G 可用。
 - 内存约 1.6GiB，未配置 swap。
 - 当前仅监听 SSH 端口。
 
-部署前需要先安装 Docker Engine、Docker Compose plugin 和 JDK 25。内存较小时建议配置 swap，避免 Maven 构建、Java 启动或数据库运行时被系统终止。
+新机器部署前需要先安装 Docker Engine、Docker Compose plugin 和 JDK 25。内存较小时建议配置 swap，避免 Maven 构建、Java 启动或数据库运行时被系统终止。
 
 安装完成后必须确认：
 
@@ -229,19 +229,19 @@ docker compose logs -f postgres
 构建产物：
 
 ```text
-target/signal-brief-0.0.1-SNAPSHOT.jar
+target/signal-brief-1.2.0-SNAPSHOT.jar
 ```
 
 上传到服务器：
 
 ```bash
-scp -F ~/.ssh/config target/signal-brief-0.0.1-SNAPSHOT.jar aliyun:/opt/signal-brief/releases/signal-brief-0.0.1-SNAPSHOT.jar
+scp -F ~/.ssh/config target/signal-brief-1.2.0-SNAPSHOT.jar aliyun:/opt/signal-brief/releases/signal-brief-1.2.0-SNAPSHOT.jar
 ```
 
 切换当前版本：
 
 ```bash
-ln -sfn /opt/signal-brief/releases/signal-brief-0.0.1-SNAPSHOT.jar /opt/signal-brief/app/signal-brief.jar
+ln -sfn /opt/signal-brief/releases/signal-brief-1.2.0-SNAPSHOT.jar /opt/signal-brief/app/signal-brief.jar
 ```
 
 ## systemd 服务配置

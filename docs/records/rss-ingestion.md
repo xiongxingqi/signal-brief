@@ -8,7 +8,7 @@ RSS 入库是 SignalBrief 的第一段核心链路，目标是把外部 RSS / At
 
 当前已经覆盖：真实配置源读取、HTTP 抓取超时、有限重试、失败分类、RSS / Atom 解析、短摘要与正文片段提取、HTML 清洗、文章去重、PostgreSQL 入库、定时触发、手动触发、批次统计、RSS 入库运行与源级明细记录、简报候选查询。
 
-当前暂不覆盖：RSS 源数据库管理、失败告警、AI 摘要和邮件发送。
+当前暂不覆盖：RSS 源数据库管理、连续失败告警、源级健康状态、网页正文增强和自动生成发送链路。
 
 ## 当前模块
 
@@ -39,15 +39,15 @@ RSS 入库是 SignalBrief 的第一段核心链路，目标是把外部 RSS / At
 ```yaml
 signal-brief:
   ingestion:
-    enabled: ${SIGNAL_BRIEF_INGESTION_ENABLED:false}
-    cron: "${SIGNAL_BRIEF_INGESTION_CRON:0 0 6 1,16 * *}"
+    enabled: false
+    cron: "0 0 6 1,16 * *"
   feed-http:
-    user-agent: ${SIGNAL_BRIEF_FEED_HTTP_USER_AGENT:signal-brief/0.0.1}
-    connect-timeout: ${SIGNAL_BRIEF_FEED_HTTP_CONNECT_TIMEOUT:3s}
-    read-timeout: ${SIGNAL_BRIEF_FEED_HTTP_READ_TIMEOUT:10s}
+    user-agent: signal-brief/0.0.1
+    connect-timeout: 3s
+    read-timeout: 10s
     retry:
-      max-attempts: ${SIGNAL_BRIEF_FEED_HTTP_RETRY_MAX_ATTEMPTS:2}
-      backoff: ${SIGNAL_BRIEF_FEED_HTTP_RETRY_BACKOFF:1s}
+      max-attempts: 2
+      backoff: 1s
   feeds:
     - name: Spring Blog
       url: https://spring.io/blog.atom
@@ -119,7 +119,7 @@ RSS 入库运行记录由 `rss_ingestion_run` 和 `rss_ingestion_source_run` 保
 本地日常验证默认运行基础测试，并关闭 Spring Docker Compose：
 
 ```bash
-./mvnw -o -Dspring.docker.compose.enabled=false test
+./mvnw -Dspring.docker.compose.enabled=false test
 ```
 
 CI 运行完整验证：

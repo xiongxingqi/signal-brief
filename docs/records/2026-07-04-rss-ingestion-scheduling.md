@@ -25,6 +25,8 @@ RSS 抓取入库第一版已经能读取配置源、抓取 feed、解析 RSS / A
 - 任务运行表、失败重试、分布式锁或 Spring Batch。
 - AI 摘要、Markdown 简报和邮件推送。
 
+上述“未包含”描述的是 2026-07-04 当次改造范围。后续已经补充手动内部 API、运行记录、Markdown 草稿、AI 摘要、简报归档和手动邮件发送；RSS 源数据库管理、失败告警、分布式锁和定时自动发送仍属于后续方向。
+
 ## 关键决策
 
 - 定时任务默认关闭，只有 `signal-brief.ingestion.enabled=true` 时才注册 `FeedIngestionScheduler`。
@@ -52,8 +54,8 @@ RSS 抓取入库第一版已经能读取配置源、抓取 feed、解析 RSS / A
 ```yaml
 signal-brief:
   ingestion:
-    enabled: ${SIGNAL_BRIEF_INGESTION_ENABLED:false}
-    cron: "${SIGNAL_BRIEF_INGESTION_CRON:0 0 6 1,16 * *}"
+    enabled: false
+    cron: "0 0 6 1,16 * *"
 ```
 
 开启示例：
@@ -69,7 +71,7 @@ SPRING_PROFILES_ACTIVE=dev SIGNAL_BRIEF_INGESTION_ENABLED=true ./mvnw spring-boo
 本地基础验证：
 
 ```bash
-./mvnw -o -Dspring.docker.compose.enabled=false test
+./mvnw -Dspring.docker.compose.enabled=false test
 ```
 
 CI 完整验证：
@@ -82,8 +84,7 @@ CI 完整验证：
 
 ## 后续事项
 
-- 增加手动触发入口，用于本地调试、补偿执行和运维操作。
-- 增加任务运行记录，保存开始时间、结束时间、统计结果和失败原因。
-- 接入真实 RSS 源后补充超时、重试、失败告警和基础指标。
-- 基于 `ArticleQueryService` 实现 AI 摘要、Markdown 简报和邮件推送。
+- 手动触发入口和任务运行记录已经完成，后续继续完善鉴权、保留周期和清理策略。
+- 真实 RSS 源、HTTP 超时和有限重试已经落地，后续重点是新增源审计、连续失败告警和源级健康状态。
+- 基于 `ArticleQueryService` 的 Markdown 草稿、AI 摘要、手动归档和手动邮件发送已经完成，后续是定时自动生成、归档和发送。
 - 如后续多实例部署，再评估分布式锁或更完整的批处理框架。
