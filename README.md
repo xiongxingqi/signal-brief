@@ -99,6 +99,8 @@ SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 - `src/test/resources/application-test.yaml`：测试 profile 差异。
 - `.env.example`：环境变量示例和说明。
 - `docs/deployment.md`：阿里云内网试运行部署、备份、升级和回滚手册。
+- `docs/github-workflow.md`：GitHub Issues、PR、Actions 和后续 Projects 使用备忘。
+- `docs/codex-mcp-github.md`：Codex MCP 与 GitHub MCP 接入和排查备忘。
 
 关键原则：
 

@@ -157,15 +157,17 @@ AI 模块围绕“可靠简报”设计，而不是追求模型能力堆叠：
 - 已使用真实 AI Provider 验证摘要 prompt、OpenAI-compatible Chat Completions 输出结构、成功归档链路和超时表现；试运行阶段建议将 AI 读取超时配置为 `60s`。
 - 已增强 RSS / Atom 内容提取策略，在短摘要之外保存清洗后的正文片段，并覆盖 RSS `description`、RSS `content:encoded`、Atom `summary` 和 Atom `content` 等常见字段差异。
 - 已给 RSS 入库、AI Provider 调用、简报归档和邮件发送补充基础运行日志，便于试运行排查，且不输出密钥、正文全文或授权头。
+- 已接入 GitHub MCP，并把近期路线拆成 GitHub Issues `#2` 到 `#8`。当前阶段先使用默认 labels 和 issues 管理任务，Projects、自定义 labels 和 issue type 暂缓。
 
 近期优先级：
 
-1. 建立新增 RSS 源质量审计清单，检查字段完整性、内容所在字段、是否全文或短摘要、是否与已有源重复，再决定是否纳入默认源。
-2. 增加文章内容增强模块，针对 RSS 正文片段过短或缺失的文章抓取原文正文、清洗 HTML、截断入库，并让 AI 摘要优先消费增强内容。
-3. 增加抓取失败告警策略，并基于运行记录沉淀源级健康状态。
-4. 增加定时自动生成、归档和发送。
-5. 扩展邮件投递能力，例如 HTML 模板、失败重试和发送耗时统计。
-6. 在 CI 稳定后补充 CD 能力，先从手动触发的受控部署开始，再评估标签发布或 `main` 合并后自动部署。
+1. 继续完善 GitHub 基础工作流，以 Issues 承接可执行任务，并让后续分支、提交、PR 和 CI 与 issue 关联；项目文档继续保存背景、决策和长期上下文。
+2. 建立新增 RSS 源质量审计清单，检查字段完整性、内容所在字段、是否全文或短摘要、是否与已有源重复，再决定是否纳入默认源。
+3. 增加文章内容增强模块，针对 RSS 正文片段过短或缺失的文章抓取原文正文、清洗 HTML、截断入库，并让 AI 摘要优先消费增强内容。
+4. 增加抓取失败告警策略，并基于运行记录沉淀源级健康状态。
+5. 增加定时自动生成、归档和发送。
+6. 扩展邮件投递能力，例如 HTML 模板、失败重试和发送耗时统计。
+7. 在 CI 稳定后补充 CD 能力，先从手动触发的受控部署开始，再评估标签发布或 `main` 合并后自动部署。
 
 暂不做：
 
@@ -189,5 +191,7 @@ AI 模块围绕“可靠简报”设计，而不是追求模型能力堆叠：
 - `docs/records/brief-archive-mail-delivery.md`：简报归档与邮件发送基础记录。
 - `docs/records/manual-trigger-api.md`：内部手动触发 API 和 OpenAPI 文档记录。
 - `docs/records/deployment-runbook.md`：第一版部署和内网试运行设计记录。
+- `docs/github-workflow.md`：GitHub Issues、PR、Actions 和后续 Projects 使用备忘。
+- `docs/codex-mcp-github.md`：Codex MCP 与 GitHub MCP 接入和排查备忘。
 
 本文档只描述项目定位、当前状态和路线。具体实现细节以源码、测试、迁移脚本和 records 文档为准。
