@@ -2,11 +2,11 @@
 
 ## 项目概览
 
-SignalBrief 是 Spring Boot 4 + Maven 服务，运行目标为 Java 25。当前核心能力是 RSS / Atom 抓取、解析、去重入库、定时触发和简报候选文章查询；AI 摘要、Markdown 简报、邮件推送和归档仍属于后续阶段。项目主语言为中文，面向维护者的文档、注释、日志、异常说明、Issue、PR、评审意见、提交摘要和代理回复默认使用中文；代码标识符、配置键、协议字段和通用技术术语可保留英文。
+SignalBrief 是 Spring Boot 4 + Maven 服务，运行目标为 Java 25。当前已具备 RSS / Atom 抓取入库、定时采集、运行记录、候选文章查询、Markdown 简报草稿、AI 摘要手动生成、简报归档、手动邮件发送，以及内部 API / OpenAPI 管理入口；定时自动生成发送、HTML 邮件、邮件重试和源级健康告警仍属于后续阶段。项目主语言为中文，面向维护者的文档、注释、日志、异常说明、Issue、PR、评审意见、提交摘要和代理回复默认使用中文；代码标识符、配置键、协议字段和通用技术术语可保留英文。
 
 ## 项目结构
 
-- `src/main/java/cn/name/celestrong/signalbrief`：应用源码，按 `config`、`feed`、`article`、`ingestion` 等业务边界组织。
+- `src/main/java/cn/name/celestrong/signalbrief`：应用源码，按 `config`、`content`、`feed`、`article`、`ingestion`、`brief`、`ai`、`mail`、`internal` 等业务边界组织。
 - `src/main/resources`：应用配置、Flyway 迁移、模板和静态资源；数据库迁移放在 `db/migration`。
 - `src/test/java`：测试源码；普通单元测试命名为 `*Test`，数据库和 Mapper 集成测试命名为 `*IT`。
 - `src/test/resources`：测试配置和 fixture，例如 `fixtures/rss`。

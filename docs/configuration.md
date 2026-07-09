@@ -9,7 +9,8 @@
 - `src/main/resources/application-prod.yaml`：生产 profile 差异，不写真实地址、账号、密码或密钥。
 - `src/test/resources/application-test.yaml`：测试 profile 差异；CI 通过环境变量和 PostgreSQL service 提供基础设施。
 - `.env.example`：环境变量示例和说明，不提交真实密钥。
-- 部署环境变量文件：例如 `/opt/signal-brief/config/signal-brief.env`，由部署环境维护，不提交到 Git。
+- 部署环境包外配置：例如 `/opt/signal-brief/config/application-prod.yaml`，由部署环境维护，不提交到 Git。
+- 部署根目录 `.env`：只保存 Docker Compose PostgreSQL 变量，例如 `POSTGRES_DB`、`POSTGRES_USER`、`POSTGRES_PASSWORD` 和 `POSTGRES_PORT`，不混入 Spring 应用配置。
 
 ## 写法规则
 
