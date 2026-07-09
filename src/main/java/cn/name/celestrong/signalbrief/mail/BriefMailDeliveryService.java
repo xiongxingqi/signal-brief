@@ -6,6 +6,8 @@ import cn.name.celestrong.signalbrief.brief.BriefGenerationNotFoundException;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationNotReadyException;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationStatus;
 import cn.name.celestrong.signalbrief.config.BriefMailProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,8 @@ import java.util.Objects;
  */
 @Service
 public class BriefMailDeliveryService {
+
+    private static final Logger log = LoggerFactory.getLogger(BriefMailDeliveryService.class);
 
     private static final String DEFAULT_ERROR_SUMMARY = "邮件发送失败";
 
@@ -76,17 +80,45 @@ public class BriefMailDeliveryService {
         BriefMailSender sender = requireAvailableSender();
         String subject = subject(archive);
         List<BriefMailDelivery> deliveries = new ArrayList<>();
+        int sentCount = 0;
+        int failedCount = 0;
+        log.info(
+                "Brief mail delivery started: briefGenerationId={}, recipients={}",
+                briefGenerationId,
+                properties.recipients().size()
+        );
         for (String recipient : properties.recipients()) {
             // 先创建投递记录，再执行外部发送，确保单个收件人失败也有可追踪结果。
             Long deliveryId = deliveryMapper.insertPending(briefGenerationId, recipient, subject);
             RuntimeException sendFailure = send(sender, recipient, subject, archive.summaryMarkdown());
             if (sendFailure == null) {
                 markSent(deliveryId);
+                sentCount++;
+                log.info(
+                        "Brief mail delivery sent: briefGenerationId={}, deliveryId={}, recipient={}",
+                        briefGenerationId,
+                        deliveryId,
+                        recipient
+                );
             } else {
                 markFailed(deliveryId, sendFailure);
+                failedCount++;
+                log.warn(
+                        "Brief mail delivery failed: briefGenerationId={}, deliveryId={}, recipient={}, errorType={}",
+                        briefGenerationId,
+                        deliveryId,
+                        recipient,
+                        sendFailure.getClass().getSimpleName()
+                );
             }
             deliveries.add(findDelivery(deliveryId));
         }
+        log.info(
+                "Brief mail delivery completed: briefGenerationId={}, sent={}, failed={}",
+                briefGenerationId,
+                sentCount,
+                failedCount
+        );
         return new BriefMailDeliveryResult(briefGenerationId, deliveries);
     }
 

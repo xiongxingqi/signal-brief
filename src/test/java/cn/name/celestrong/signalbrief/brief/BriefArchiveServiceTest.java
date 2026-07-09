@@ -7,6 +7,9 @@ import cn.name.celestrong.signalbrief.article.Article;
 import cn.name.celestrong.signalbrief.article.ArticleQueryService;
 import cn.name.celestrong.signalbrief.config.AiSummaryProperties;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -15,9 +18,12 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@ExtendWith(OutputCaptureExtension.class)
 class BriefArchiveServiceTest {
 
     private static final Instant START_INCLUSIVE = Instant.parse("2026-07-01T00:00:00Z");
@@ -48,7 +54,7 @@ class BriefArchiveServiceTest {
     }
 
     @Test
-    void archivesSuccessfulAiSummary() {
+    void archivesSuccessfulAiSummary(CapturedOutput output) {
         RecordingBriefGenerationService briefService = new RecordingBriefGenerationService("# draft\n");
         RecordingAiSummaryService aiService = new RecordingAiSummaryService("## summary\n");
         RecordingBriefGenerationMapper mapper = new RecordingBriefGenerationMapper();
@@ -63,10 +69,18 @@ class BriefArchiveServiceTest {
         assertEquals(1, mapper.successCalls);
         assertEquals(COMPLETED_AT, mapper.completedAt);
         assertEquals(0, mapper.failedCalls);
+        assertTrue(output.getOut().contains("Brief archive started: briefGenerationId=100"));
+        assertTrue(output.getOut().contains("startInclusive=2026-07-01T00:00:00Z"));
+        assertTrue(output.getOut().contains("endExclusive=2026-07-16T00:00:00Z"));
+        assertTrue(output.getOut().contains("draftCharacters=8"));
+        assertTrue(output.getOut().contains("Brief archive completed: briefGenerationId=100"));
+        assertTrue(output.getOut().contains("summaryCharacters=11"));
+        assertFalse(output.getOut().contains("# draft"));
+        assertFalse(output.getOut().contains("## summary"));
     }
 
     @Test
-    void savesFailedArchiveWhenProviderFails() {
+    void savesFailedArchiveWhenProviderFails(CapturedOutput output) {
         RecordingBriefGenerationService briefService = new RecordingBriefGenerationService("# draft\n");
         AiSummaryException providerFailure = new AiSummaryException("provider down");
         RecordingAiSummaryService aiService = new RecordingAiSummaryService(providerFailure);
@@ -82,6 +96,10 @@ class BriefArchiveServiceTest {
         assertSame(providerFailure, exception.getCause());
         assertEquals(1, mapper.failedCalls);
         assertEquals("provider down", mapper.errorSummary);
+        assertTrue(output.getOut().contains("Brief archive failed: briefGenerationId=100"));
+        assertTrue(output.getOut().contains("errorType=AiSummaryException"));
+        assertFalse(output.getOut().contains("# draft"));
+        assertFalse(output.getOut().contains("provider down"));
     }
 
     @Test

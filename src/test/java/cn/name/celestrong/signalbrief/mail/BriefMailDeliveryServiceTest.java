@@ -7,8 +7,11 @@ import cn.name.celestrong.signalbrief.brief.BriefGenerationNotReadyException;
 import cn.name.celestrong.signalbrief.brief.BriefGenerationStatus;
 import cn.name.celestrong.signalbrief.config.BriefMailProperties;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -26,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@ExtendWith(OutputCaptureExtension.class)
 class BriefMailDeliveryServiceTest {
 
     private static final Long BRIEF_GENERATION_ID = 100L;
@@ -73,7 +77,7 @@ class BriefMailDeliveryServiceTest {
     }
 
     @Test
-    void recordsOneFailedRecipientWithoutBlockingOtherRecipients() {
+    void recordsOneFailedRecipientWithoutBlockingOtherRecipients(CapturedOutput output) {
         RecordingBriefGenerationMapper briefGenerationMapper = new RecordingBriefGenerationMapper(
                 successfulArchive(BRIEF_GENERATION_ID)
         );
@@ -104,6 +108,16 @@ class BriefMailDeliveryServiceTest {
         assertEquals("邮件发送失败", result.deliveries().get(1).errorSummary());
         assertEquals(2, deliveryMapper.sentCalls);
         assertEquals(1, deliveryMapper.failedCalls);
+        assertTrue(output.getOut().contains("Brief mail delivery started: briefGenerationId=100"));
+        assertTrue(output.getOut().contains("recipients=3"));
+        assertTrue(output.getOut().contains("Brief mail delivery sent: briefGenerationId=100, deliveryId=200"));
+        assertTrue(output.getOut().contains("recipient=reader-a@example.com"));
+        assertTrue(output.getOut().contains("Brief mail delivery failed: briefGenerationId=100, deliveryId=201"));
+        assertTrue(output.getOut().contains("recipient=reader-b@example.com"));
+        assertTrue(output.getOut().contains("errorType=RuntimeException"));
+        assertTrue(output.getOut().contains("Brief mail delivery completed: briefGenerationId=100, sent=2, failed=1"));
+        assertFalse(output.getOut().contains("## summary"));
+        assertFalse(output.getOut().contains("smtp down"));
     }
 
     @Test

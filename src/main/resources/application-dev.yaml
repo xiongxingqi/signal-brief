@@ -3,6 +3,9 @@ spring:
     username: celestrong
     password: 123456
     url: jdbc:postgresql://localhost:5432/signal_brief
+  docker:
+    compose:
+      enabled: true
 logging:
   level:
     root: info

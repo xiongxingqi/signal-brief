@@ -2,6 +2,8 @@ package cn.name.celestrong.signalbrief.brief;
 
 import cn.name.celestrong.signalbrief.ai.AiSummaryService;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,8 @@ import java.util.Objects;
  */
 @Service
 public class BriefArchiveService {
+
+    private static final Logger log = LoggerFactory.getLogger(BriefArchiveService.class);
 
     private static final int MAX_ERROR_SUMMARY_LENGTH = 1_000;
     private static final String DEFAULT_ERROR_SUMMARY = "AI 摘要生成失败";
@@ -56,11 +60,23 @@ public class BriefArchiveService {
         aiSummaryService.requireAvailable();
         String draftMarkdown = briefGenerationService.generate(startInclusive, endExclusive);
         Long id = mapper.insertGenerating(startInclusive, endExclusive, draftMarkdown);
+        log.info(
+                "Brief archive started: briefGenerationId={}, startInclusive={}, endExclusive={}, draftCharacters={}",
+                id,
+                startInclusive,
+                endExclusive,
+                draftMarkdown.length()
+        );
 
         String summaryMarkdown;
         try {
             summaryMarkdown = aiSummaryService.summarizeMarkdown(draftMarkdown);
         } catch (RuntimeException ex) {
+            log.warn(
+                    "Brief archive failed: briefGenerationId={}, errorType={}",
+                    id,
+                    ex.getClass().getSimpleName()
+            );
             markFailed(id, ex);
             throw new BriefArchiveGenerationException(id, "AI 摘要归档生成失败", ex);
         }
@@ -69,8 +85,14 @@ public class BriefArchiveService {
         if (updated != 1) {
             throw new IllegalStateException("简报归档状态更新失败: " + id);
         }
-        return mapper.findById(id)
+        BriefGeneration archive = mapper.findById(id)
                 .orElseThrow(() -> new IllegalStateException("简报归档记录不存在: " + id));
+        log.info(
+                "Brief archive completed: briefGenerationId={}, summaryCharacters={}",
+                id,
+                summaryMarkdown.length()
+        );
+        return archive;
     }
 
     private void markFailed(Long id, RuntimeException exception) {

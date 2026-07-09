@@ -3,6 +3,8 @@ package cn.name.celestrong.signalbrief.ai;
 import cn.name.celestrong.signalbrief.config.AiSummaryProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,8 @@ import java.util.List;
 @Component
 public class OpenAiCompatibleAiSummaryClient implements AiSummaryClient {
 
+    private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleAiSummaryClient.class);
+
     private final RestClient restClient;
     private final AiSummaryProperties properties;
 
@@ -34,6 +38,7 @@ public class OpenAiCompatibleAiSummaryClient implements AiSummaryClient {
 
     @Override
     public String summarize(String systemPrompt, String userContent) {
+        long startedAt = System.nanoTime();
         ChatCompletionRequest request = new ChatCompletionRequest(
                 properties.model(),
                 List.of(
@@ -44,8 +49,27 @@ public class OpenAiCompatibleAiSummaryClient implements AiSummaryClient {
                 properties.maxOutputTokens()
         );
 
-        ChatCompletionResponse response = requestSummary(request);
-        return extractSummaryContent(response);
+        try {
+            ChatCompletionResponse response = requestSummary(request);
+            String summary = extractSummaryContent(response);
+            log.info(
+                    "AI summary completed: model={}, inputCharacters={}, outputCharacters={}, durationMs={}",
+                    properties.model(),
+                    userContent.length(),
+                    summary.length(),
+                    elapsedMillis(startedAt)
+            );
+            return summary;
+        } catch (AiSummaryException ex) {
+            log.warn(
+                    "AI summary failed: model={}, inputCharacters={}, durationMs={}, error={}",
+                    properties.model(),
+                    userContent.length(),
+                    elapsedMillis(startedAt),
+                    ex.getMessage()
+            );
+            throw ex;
+        }
     }
 
     private ChatCompletionResponse requestSummary(ChatCompletionRequest request) {
@@ -80,6 +104,10 @@ public class OpenAiCompatibleAiSummaryClient implements AiSummaryClient {
         }
 
         return choice.message().content().strip();
+    }
+
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000;
     }
 
     private record ChatCompletionRequest(

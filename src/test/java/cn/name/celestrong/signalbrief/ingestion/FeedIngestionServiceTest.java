@@ -7,6 +7,9 @@ import cn.name.celestrong.signalbrief.feed.FetchedArticle;
 import cn.name.celestrong.signalbrief.feed.FeedClient;
 import cn.name.celestrong.signalbrief.feed.FeedParser;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -20,14 +23,16 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 使用手写 fake 保留批次统计和单源失败隔离语义，避免 mock 配置掩盖编排流程。
  */
+@ExtendWith(OutputCaptureExtension.class)
 class FeedIngestionServiceTest {
 
     @Test
-    void ingestsEnabledFeedsAndAggregatesStatistics() {
+    void ingestsEnabledFeedsAndAggregatesStatistics(CapturedOutput output) {
         FeedProperties properties = new FeedProperties(List.of(
                 new FeedProperties.FeedSource("Enabled", URI.create("https://example.com/feed.xml"), ArticleCategory.JAVA, true),
                 new FeedProperties.FeedSource("Disabled", URI.create("https://example.com/disabled.xml"), ArticleCategory.JAVA, false)
@@ -54,6 +59,10 @@ class FeedIngestionServiceTest {
         assertEquals(1, result.skippedCount());
         assertEquals(0, result.failedSourceCount());
         assertEquals(2, articleIngestionService.calls);
+        assertTrue(output.getOut().contains("Feed ingestion started: runId=100, triggerType=MANUAL, sources=1"));
+        assertTrue(output.getOut().contains("Feed source ingestion completed: runId=100, name=Enabled"));
+        assertTrue(output.getOut().contains("fetched=2, inserted=1, skipped=1"));
+        assertTrue(output.getOut().contains("Feed ingestion completed: runId=100"));
     }
 
     @Test

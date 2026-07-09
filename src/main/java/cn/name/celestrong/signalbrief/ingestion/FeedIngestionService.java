@@ -50,6 +50,12 @@ public class FeedIngestionService implements FeedIngestionOperations {
         List<FeedProperties.FeedSource> enabledFeeds = feedProperties.enabledFeeds();
         IngestionRunRecorder.RunContext runContext = runRecorder.startRun(triggerType, enabledFeeds.size());
         FeedIngestionResult result = FeedIngestionResult.empty(runContext.runId());
+        log.info(
+                "Feed ingestion started: runId={}, triggerType={}, sources={}",
+                runContext.runId(),
+                triggerType,
+                enabledFeeds.size()
+        );
         for (FeedProperties.FeedSource source : enabledFeeds) {
             try {
                 result = result.plus(ingestSource(runContext, source));
@@ -125,6 +131,14 @@ public class FeedIngestionService implements FeedIngestionOperations {
             return failureResult;
         }
         recordSourceSuccess(sourceContext, result);
+        log.info(
+                "Feed source ingestion completed: runId={}, name={}, fetched={}, inserted={}, skipped={}",
+                runContext.runId(),
+                source.name(),
+                result.fetchedCount(),
+                result.insertedCount(),
+                result.skippedCount()
+        );
         return result;
     }
 

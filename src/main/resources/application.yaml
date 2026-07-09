@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: signal-brief
+#  profiles:
+#    active: dev
   datasource:
     driver-class-name: org.postgresql.Driver
     # 数据库连接配置通过 SPRING_DATASOURCE_* 环境变量或 profile 配置提供。

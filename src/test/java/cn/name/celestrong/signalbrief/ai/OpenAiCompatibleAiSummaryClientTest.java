@@ -2,6 +2,9 @@ package cn.name.celestrong.signalbrief.ai;
 
 import cn.name.celestrong.signalbrief.config.AiSummaryProperties;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -25,10 +28,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * 使用 MockRestServiceServer 固定 AI Provider 边界，避免测试访问真实服务。
  */
+@ExtendWith(OutputCaptureExtension.class)
 class OpenAiCompatibleAiSummaryClientTest {
 
     @Test
-    void postsChatCompletionRequestAndReturnsAssistantContent() {
+    void postsChatCompletionRequestAndReturnsAssistantContent(CapturedOutput output) {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         OpenAiCompatibleAiSummaryClient client = client(builder);
@@ -71,11 +75,17 @@ class OpenAiCompatibleAiSummaryClientTest {
         String summary = client.summarize("系统提示", "用户内容");
 
         assertEquals("## 摘要\n- 重点更新", summary);
+        assertTrue(output.getOut().contains("AI summary completed: model=test-model"));
+        assertTrue(output.getOut().contains("inputCharacters=4"));
+        assertTrue(output.getOut().contains("outputCharacters=12"));
+        assertFalse(output.getOut().contains("test-key"));
+        assertFalse(output.getOut().contains("用户内容"));
+        assertFalse(output.getOut().contains("## 摘要"));
         server.verify();
     }
 
     @Test
-    void mapsProviderServerErrorToAiSummaryException() {
+    void mapsProviderServerErrorToAiSummaryException(CapturedOutput output) {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         OpenAiCompatibleAiSummaryClient client = client(builder);
@@ -91,6 +101,10 @@ class OpenAiCompatibleAiSummaryClientTest {
 
         assertTrue(exception.getMessage().contains("AI Provider 返回 HTTP 500"));
         assertFalse(exception.getCause() instanceof RestClientResponseException);
+        assertTrue(output.getOut().contains("AI summary failed: model=test-model"));
+        assertTrue(output.getOut().contains("error=AI Provider 返回 HTTP 500"));
+        assertFalse(output.getOut().contains("test-key"));
+        assertFalse(output.getOut().contains("用户内容"));
         server.verify();
     }
 
